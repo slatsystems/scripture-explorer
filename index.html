@@ -66,6 +66,17 @@ footer{display:flex;gap:16px;align-items:center;padding:7px 16px;background:var(
 .leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
 #hint{margin-left:auto}
 @media (max-width:700px){ header h1{font-size:14px} .stats{display:none} #hint{display:none} }
+.tip{position:relative;cursor:help;border-bottom:1px dotted var(--muted)}
+.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#22224a;border:1px solid var(--gold);color:var(--text);padding:9px 11px;border-radius:8px;width:230px;font-size:12px;line-height:1.45;z-index:60;white-space:normal;text-transform:none;letter-spacing:0;font-weight:400;box-shadow:0 6px 22px rgba(0,0,0,.55)}
+#welcome{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(13,13,26,.82);backdrop-filter:blur(3px);z-index:70;padding:16px}
+.wcard{background:var(--card);border:1px solid rgba(212,175,55,.45);border-radius:14px;max-width:430px;padding:24px 26px;box-shadow:0 12px 50px rgba(0,0,0,.6)}
+.wcard h2{color:var(--gold);font-size:18px;margin-bottom:10px}
+.wcard p{font-size:13px;color:#cfcce4;margin:8px 0}
+.wcard .row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:4px 0}
+.wcard .row i{width:16px;height:3px;border-radius:2px;flex:none}
+.wcard b{color:var(--gold)}
+#wgo{margin-top:14px;width:100%;background:var(--gold);color:#1a1a2e;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:600;cursor:pointer}
+#wgo:hover{background:#e3c050}
 </style>
 </head>
 <body>
@@ -81,13 +92,26 @@ footer{display:flex;gap:16px;align-items:center;padding:7px 16px;background:var(
     <button class="btn fbtn" data-f="cross">Cross-testament</button>
     <button class="btn fbtn" data-f="ot">Within OT</button>
     <button class="btn fbtn" data-f="nt">Within NT</button>
-    <label class="sl">Min votes <input type="range" id="minvotes" min="0" max="100" value="0"><span id="mvval">0</span></label>
+    <label class="sl"><span class="tip" tabindex="0" data-tip="Votes come from OpenBible.info readers who rated how helpful each cross-reference is. Higher votes = a stronger, more widely recognized connection. Brighter arcs have more votes. Slide to hide weaker links.">Min votes</span> <input type="range" id="minvotes" min="0" max="100" value="0"><span id="mvval">0</span></label>
     <button class="btn" id="zin">+</button>
     <button class="btn" id="zout">&minus;</button>
     <button class="btn" id="reset">Reset</button>
   </div>
 </header>
 <div id="stage">
+  <div id="welcome">
+    <div class="wcard">
+      <h2>&#10022; Welcome to Scripture Explorer</h2>
+      <p>Every arc below connects two passages of Scripture — <b>344,799 cross-references</b> spanning all 66 books, from Genesis to Revelation.</p>
+      <div class="row"><i style="background:var(--purple)"></i> Connections between nearby books</div>
+      <div class="row"><i style="background:var(--green)"></i> Medium spans</div>
+      <div class="row"><i style="background:var(--orange)"></i> Long spans</div>
+      <div class="row"><i style="background:var(--red)"></i> Spanning nearly the whole Bible</div>
+      <p><b>What are votes?</b> Readers at OpenBible.info rated how helpful each cross-reference is. Higher votes mean a stronger, more widely recognized connection — those arcs are drawn brighter.</p>
+      <p>Scroll to zoom &middot; drag to pan &middot; tap a book or arc &middot; search any verse like <b>John 3:16</b></p>
+      <button id="wgo">Start exploring</button>
+    </div>
+  </div>
   <div id="loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#0d0d1a;z-index:50">
     <div style="width:34px;height:34px;border:3px solid #2a2a4a;border-top-color:#d4af37;border-radius:50%;animation:spin 1s linear infinite"></div>
     <div style="color:#9a96b8;font-size:13px" id="loadmsg">Loading 344,799 connections…</div>
@@ -360,12 +384,15 @@ function renderBase() {
 }
 function blit() {
   bctx.clearRect(0, 0, W, H);
+  // focus mode: dim the full web when a book/connection is selected so highlights pop
+  bctx.globalAlpha = (selBook >= 0 || selConn >= 0) ? 0.22 : 1;
   if (stripZoom === zoom) {
     bctx.drawImage(strip, stripX0 - panX, 0, stripW, H);
   } else { // zoom changed: scale the stale strip as an instant preview while re-render runs
     const s = zoom / stripZoom;
     bctx.drawImage(strip, stripX0 * s - panX, 0, stripW * s, H);
   }
+  bctx.globalAlpha = 1;
   drawBar(bctx);
 }
 /* coalesced view updates: pan = blit only; re-render strip only when leaving it or zoom/filter changed */
@@ -530,8 +557,10 @@ function showBook(b, chap = -1, verse = -1) {
       <div class="m"><div class="k">Written</div><div class="v">${fmtYear(bk.year)}</div></div>
       <div class="m"><div class="k">Chapters</div><div class="v">${bk.chapters}</div></div>
       <div class="m"><div class="k">Connections${chap >= 0 ? ' here' : ''}</div><div class="v">${list.length.toLocaleString()}</div></div>
-    </div>
-    <div class="sect">Top connections${list.length > 40 ? ' (40 of ' + list.length.toLocaleString() + ')' : ''}</div>`;
+    </div>`;
+    if (chap >= 0 && verse >= 0)
+      html += `<div class="vtext" id="vts"><div class="vr">${esc(refOf(chap, verse))}</div><div class="vt mut">Loading…</div></div>`;
+    html += `<div class="sect">Top connections${list.length > 40 ? ' (40 of ' + list.length.toLocaleString() + ')' : ''} <span class="tip" tabindex="0" data-tip="Votes come from OpenBible.info readers who rated how helpful each cross-reference is. Higher votes = a stronger, more widely recognized connection.">votes?</span></div>`;
     if (!top.length) html += `<div style="color:var(--muted)">No connections match the current filters.</div>`;
     for (const i of top) {
       html += `<div class="connrow" data-i="${i}">
@@ -541,6 +570,7 @@ function showBook(b, chap = -1, verse = -1) {
     pbody.innerHTML = html;
     pbody.querySelectorAll('.connrow').forEach(el => el.onclick = () => showConn(+el.dataset.i));
     pbody.scrollTop = 0;
+    if (chap >= 0 && verse >= 0) loadVerse(chap, verse, 'vts');
   };
   panelStack = [render];
   openPanel(render, false); panelStack = [render]; pback.style.display = 'none';
@@ -560,7 +590,7 @@ async function showConn(i) {
         <div class="m"><div class="k">${esc(b1.name)}</div><div class="v">${fmtYear(b1.year)}</div></div>
         <div class="m"><div class="k">${esc(b2.name)}</div><div class="v">${fmtYear(b2.year)}</div></div>
         <div class="m"><div class="k">Time span</div><div class="v">≈ ${span.toLocaleString()} years</div></div>
-        <div class="m"><div class="k">Community votes</div><div class="v">${votes[i]}</div></div>
+        <div class="m"><div class="k"><span class="tip" tabindex="0" data-tip="OpenBible.info readers rated how helpful this cross-reference is. Higher votes = a stronger, more widely recognized connection.">Community votes</span></div><div class="v">${votes[i]}</div></div>
       </div>
       <div class="expl">${esc(ex.text)}</div>
       <div class="sect">Verse text (WEB)</div>
@@ -776,6 +806,17 @@ document.getElementById('reset').onclick = () => {
 window.addEventListener('resize', resize);
 resize();
 { const l = document.getElementById('loading'); if (l) l.remove(); }
+// first-visit welcome (explains the viz + votes); never shown again once dismissed
+try {
+  if (!localStorage.getItem('se_welcome')) {
+    const w = document.getElementById('welcome');
+    w.style.display = 'flex';
+    document.getElementById('wgo').onclick = () => {
+      w.style.display = 'none';
+      try { localStorage.setItem('se_welcome', '1'); } catch (e) {}
+    };
+  }
+} catch (e) {}
 
 })();
 </script>
