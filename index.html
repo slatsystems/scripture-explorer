@@ -1184,6 +1184,7 @@ try {
     const role = roleOf(n), col = ROLE[role].c;
     const g = document.createElementNS(SVGNS, 'g');
     g.setAttribute('class', 'node-chip');
+    g.dataset.id = n.id;
     g.setAttribute('transform', `translate(${pp.x},${pp.y})`);
     const r = document.createElementNS(SVGNS, 'rect');
     const w = CHIP_W, h = CHIP_H, ln = isLine(n);
@@ -1204,17 +1205,15 @@ try {
     t.setAttribute('y', 1); t.setAttribute('text-anchor', ln ? 'start' : 'middle');
     let nm = n.name; if (nm.length > 15) nm = nm.slice(0, 14) + '…';
     t.textContent = nm; g.appendChild(t);
-    g.addEventListener('click', ev => { ev.stopPropagation(); openPerson(n.id); });
     const hc = hiddenCount(n);
     if (hc > 0 || (n.expanded && n.children.some(c => !isLine(c)))) {
       const ex = document.createElementNS(SVGNS, 'g');
-      ex.setAttribute('class', 'expander');
+      ex.setAttribute('class', 'expander'); ex.dataset.exp = n.id;
       ex.setAttribute('transform', `translate(${w / 2},${h / 2})`);
       const c = document.createElementNS(SVGNS, 'circle'); c.setAttribute('r', 9); ex.appendChild(c);
       const xt = document.createElementNS(SVGNS, 'text');
       xt.textContent = n.expanded ? '−' : '+' + hc;
       xt.setAttribute('font-size', n.expanded ? '13' : '9'); ex.appendChild(xt);
-      ex.addEventListener('click', ev => { ev.stopPropagation(); n.expanded = !n.expanded; render(); });
       g.appendChild(ex);
     }
     return g;
@@ -1275,20 +1274,31 @@ try {
 
   /* ---- pan / zoom ---- */
   function bindPointer() {
-    let drag = false, moved = false, lx = 0, ly = 0; const pts = new Map(); let pinch = null;
+    let drag = false, moved = false, lx = 0, ly = 0, dx0 = 0, dy0 = 0; const pts = new Map(); let pinch = null;
     svg.addEventListener('pointerdown', e => {
-      svg.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+      pts.set(e.pointerId, [e.offsetX, e.offsetY]);
       if (pts.size === 2) { const v = [...pts.values()]; pinch = { d: Math.hypot(v[0][0]-v[1][0], v[0][1]-v[1][1]), s: scale, cx:(v[0][0]+v[1][0])/2, cy:(v[0][1]+v[1][1])/2 }; }
-      drag = true; moved = false; lx = e.offsetX; ly = e.offsetY; svg.classList.add('drag');
+      drag = true; moved = false; lx = e.offsetX; ly = e.offsetY; dx0 = e.clientX; dy0 = e.clientY; svg.classList.add('drag');
     });
     svg.addEventListener('pointermove', e => {
       if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.offsetX, e.offsetY]);
       if (pts.size === 2 && pinch) { const v = [...pts.values()]; const d = Math.hypot(v[0][0]-v[1][0], v[0][1]-v[1][1]);
         zoomAt(pinch.s * d / pinch.d, pinch.cx, pinch.cy); return; }
       if (drag) { tx += e.offsetX - lx; ty += e.offsetY - ly; lx = e.offsetX; ly = e.offsetY;
-        if (Math.abs(e.offsetX - lx) > 1) moved = true; moved = moved || true; applyTransform(); }
+        if (Math.abs(e.clientX - dx0) > 4 || Math.abs(e.clientY - dy0) > 4) { moved = true; if (pts.size === 1) svg.setPointerCapture(e.pointerId); }
+        applyTransform(); }
     });
-    svg.addEventListener('pointerup', e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; drag = false; svg.classList.remove('drag'); });
+    svg.addEventListener('pointerup', e => {
+      pts.delete(e.pointerId); if (pts.size < 2) pinch = null; drag = false; svg.classList.remove('drag');
+      if (!moved) { // tap: hit-test via elementFromPoint (works regardless of pointer capture)
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const exp = el && el.closest && el.closest('.expander');
+        if (exp) { const n = byId[exp.dataset.exp]; if (n) { n.expanded = !n.expanded; render(); } return; }
+        const chip = el && el.closest && el.closest('.node-chip');
+        if (chip && chip.dataset.id) { openPerson(chip.dataset.id); return; }
+        tpanel().classList.remove('open');
+      }
+    });
     svg.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; drag = false; });
     svg.addEventListener('wheel', e => {
       e.preventDefault();
@@ -1333,7 +1343,6 @@ try {
     document.getElementById('tzin').onclick = () => zoomAt(scale * 1.4, svg.clientWidth / 2, svg.clientHeight / 2);
     document.getElementById('tzout').onclick = () => zoomAt(scale / 1.4, svg.clientWidth / 2, svg.clientHeight / 2);
     document.getElementById('treset').onclick = () => { render(); fit(); };
-    svg.addEventListener('click', () => tpanel().classList.remove('open'));
   }
 
   function initTree() {
