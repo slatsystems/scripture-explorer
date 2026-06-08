@@ -106,6 +106,7 @@ body.embed header h1,body.embed footer{display:none}
     <button class="btn fbtn" data-f="cross">Cross-testament</button>
     <button class="btn fbtn" data-f="ot">Within OT</button>
     <button class="btn fbtn" data-f="nt">Within NT</button>
+    <button class="btn" id="tlbtn" title="Plot books by when they were written">Timeline</button>
     <label class="sl"><span class="tip" tabindex="0" data-tip="Votes come from OpenBible.info readers who rated how helpful each cross-reference is. Higher votes = a stronger, more widely recognized connection. Brighter arcs have more votes. Slide to hide weaker links.">Min votes</span> <input type="range" id="minvotes" min="0" max="100" value="0"><span id="mvval">0</span></label>
     <button class="btn" id="zin">+</button>
     <button class="btn" id="zout">&minus;</button>
@@ -210,6 +211,34 @@ const bkOff = new Uint32Array(NB + 1);
 const bkIdx = new Uint32Array(bkOff[NB]);
 { const cur = bkOff.slice(0, NB);
   for (let i = 0; i < N; i++) { bkIdx[cur[bkF[i]]++] = i; if (bkT[i] !== bkF[i]) bkIdx[cur[bkT[i]]++] = i; } }
+/* ===== TIMELINE LAYOUT: x = authorship year, de-overlapped so every book stays tappable ===== */
+const tlOrder = BOOKS.map((b, i) => i).sort((a, b) => BOOKS[a].year - BOOKS[b].year || a - b);
+const tlMinYear = BOOKS[tlOrder[0]].year, tlMaxYear = BOOKS[tlOrder[tlOrder.length - 1]].year;
+const TL_MARGIN = 0.03, TL_GAP = 0.0128, TL_W = TL_GAP * 0.72;
+const tlCenter = new Float64Array(NB);
+{ let prev = -Infinity;
+  for (const b of tlOrder) {
+    let x = TL_MARGIN + (BOOKS[b].year - tlMinYear) / (tlMaxYear - tlMinYear) * (1 - 2 * TL_MARGIN);
+    if (x < prev + TL_GAP) x = prev + TL_GAP;
+    tlCenter[b] = x; prev = x;
+  }
+  if (prev > 1 - TL_MARGIN) { const s = (1 - 2 * TL_MARGIN) / (prev - TL_MARGIN);
+    for (const b of tlOrder) tlCenter[b] = TL_MARGIN + (tlCenter[b] - TL_MARGIN) * s; }
+}
+const tlBookStart = new Float64Array(NB), tlBookEnd = new Float64Array(NB);
+for (let b = 0; b < NB; b++) { tlBookStart[b] = tlCenter[b] - TL_W / 2; tlBookEnd[b] = tlCenter[b] + TL_W / 2; }
+const tlPosF = new Float32Array(N), tlPosT = new Float32Array(N);
+for (let i = 0; i < N; i++) {
+  const bf = bkF[i], bt = bkT[i];
+  const ff = (posF[i] - bookVStart[bf]) / (bookVEnd[bf] - bookVStart[bf]);
+  const ft = (posT[i] - bookVStart[bt]) / (bookVEnd[bt] - bookVStart[bt]);
+  tlPosF[i] = tlBookStart[bf] + ff * TL_W;
+  tlPosT[i] = tlBookStart[bt] + ft * TL_W;
+}
+// era anchor markers (placed at real book centers so they're always accurate)
+const TL_ANCHORS = [[0,'~1400 BC'],[18,'~1000 BC'],[22,'~700 BC'],[25,'Exile ~586 BC'],[38,'~430 BC'],[42,'~AD 90'],[65,'~AD 95']];
+// active layout pointers — swapped by the Timeline toggle
+let aPosF = posF, aPosT = posT, aBS = bookVStart, aBE = bookVEnd, timeline = false;
 // render buckets: 4 colors × 6 alpha levels; arcs pre-sorted by bucket so the
 // renderer batches hundreds of arcs per stroke call instead of one stroke each
 const ALV = 6;
@@ -349,7 +378,7 @@ function arcPath(ctx, x1, x2) {
   ctx.moveTo(x1, by);
   ctx.quadraticCurveTo((x1 + x2) / 2, by - 2 * h, x2, by);
 }
-const viewKey = () => filter + '|' + minVotes;
+const viewKey = () => filter + '|' + minVotes + '|' + (timeline ? 't' : 'c');
 /* progressive strip render — arcs batched ~256 per stroke, grouped by color/alpha bucket */
 function renderBase() {
   const job = ++renderJob;
@@ -380,7 +409,7 @@ function renderBase() {
         sctx.beginPath(); open = true;
       }
       if (!passes(i)) continue;
-      const x1 = posF[i] * WZ - sx0, x2 = posT[i] * WZ - sx0;
+      const x1 = aPosF[i] * WZ - sx0, x2 = aPosT[i] * WZ - sx0;
       if ((x1 < -8 && x2 < -8) || (x1 > sw + 8 && x2 > sw + 8)) continue;
       const h = Math.min(maxH, Math.max(6, Math.abs(x2 - x1) * 0.42));
       sctx.moveTo(x1, by);
@@ -421,37 +450,55 @@ function drawBar(ctx) {
   const by = barY();
   ctx.save();
   ctx.fillStyle = '#0d0d1a'; ctx.fillRect(0, by, W, H - by);
+  // timeline mode: draw era anchor guides + the "400 silent years" gap callout first (behind books)
+  if (timeline) {
+    for (const [b, lab] of TL_ANCHORS) {
+      const ax = xOf(tlCenter[b]);
+      if (ax < -2 || ax > W + 2) continue;
+      ctx.strokeStyle = 'rgba(212,175,55,.18)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(ax, topPad + 14); ctx.lineTo(ax, by); ctx.stroke();
+      ctx.fillStyle = '#6a668a'; ctx.font = '9px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(lab, ax, topPad + 8);
+    }
+    const gx1 = xOf(tlCenter[OT_END]), gx2 = xOf(tlCenter[OT_END + 1]), gm = (gx1 + gx2) / 2;
+    if (gm > -40 && gm < W + 40) {
+      ctx.fillStyle = 'rgba(212,175,55,.55)'; ctx.font = 'italic 10px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('≈ 400 silent years', gm, by - 8);
+    }
+  }
   for (let b = 0; b < NB; b++) {
-    const x1 = xOf(bookVStart[b]), x2 = xOf(bookVEnd[b]);
+    const x1 = xOf(aBS[b]), x2 = xOf(aBE[b]);
     if (x2 < 0 || x1 > W) continue;
     const w = x2 - x1;
     const sel = b === selBook, hov = b === hoverBook;
     ctx.fillStyle = sel ? '#d4af37' : hov ? '#8a6f1f' : (b <= OT_END ? (b % 2 ? '#2b2b52' : '#252547') : (b % 2 ? '#3a3050' : '#332a47'));
-    ctx.fillRect(x1, by, Math.max(w - 0.6, 0.4), barH);
-    if (w > 13) {
+    ctx.fillRect(x1, by, Math.max(w - 0.6, timeline ? 1.4 : 0.4), barH);
+    if (w > 13 || timeline) {
       ctx.save();
       ctx.translate(x1 + w / 2 + 3, by + barH + 6);
       ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = sel ? '#d4af37' : '#9a96b8';
+      ctx.fillStyle = sel ? '#d4af37' : hov ? '#d4af37' : '#9a96b8';
       ctx.font = (sel || hov ? '600 ' : '') + '10px -apple-system,sans-serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(w > 46 ? BOOKS[b].name : BOOKS[b].osis, 0, 0);
+      ctx.fillText((w > 46 || timeline) ? BOOKS[b].name : BOOKS[b].osis, 0, 0);
       ctx.restore();
-      if (w > 90) {
+      if (!timeline && w > 90) {
         ctx.fillStyle = '#6a668a'; ctx.font = '9px -apple-system,sans-serif'; ctx.textAlign = 'left';
         ctx.fillText(fmtYear(BOOKS[b].year), x1 + 3, by - 6);
       }
     }
   }
-  // testament divider
-  const dx = xOf(bookVStart[OT_END + 1]);
-  if (dx > -2 && dx < W + 2) {
-    ctx.strokeStyle = 'rgba(212,175,55,.5)'; ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(dx, topPad); ctx.lineTo(dx, by + barH); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(212,175,55,.65)'; ctx.font = '600 10px -apple-system,sans-serif';
-    ctx.textAlign = 'right'; ctx.fillText('OLD TESTAMENT', dx - 8, topPad + 8);
-    ctx.textAlign = 'left'; ctx.fillText('NEW TESTAMENT', dx + 8, topPad + 8);
+  // testament divider (canonical mode only — timeline shows the silent-years gap instead)
+  if (!timeline) {
+    const dx = xOf(bookVStart[OT_END + 1]);
+    if (dx > -2 && dx < W + 2) {
+      ctx.strokeStyle = 'rgba(212,175,55,.5)'; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(dx, topPad); ctx.lineTo(dx, by + barH); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(212,175,55,.65)'; ctx.font = '600 10px -apple-system,sans-serif';
+      ctx.textAlign = 'right'; ctx.fillText('OLD TESTAMENT', dx - 8, topPad + 8);
+      ctx.textAlign = 'left'; ctx.fillText('NEW TESTAMENT', dx + 8, topPad + 8);
+    }
   }
   ctx.restore();
 }
@@ -470,7 +517,7 @@ function drawOverlay() {
         const i = bkIdx[k];
         if (bucketOf[i] % ALV !== lv || !passes(i)) continue;
         if (selChap >= 0 && !connTouches(i, selChap, selVerse)) continue;
-        const x1 = xOf(posF[i]), x2 = xOf(posT[i]);
+        const x1 = xOf(aPosF[i]), x2 = xOf(aPosT[i]);
         if ((x1 < -8 && x2 < -8) || (x1 > W + 8 && x2 > W + 8)) continue;
         arcPath(octx, x1, x2);
         if (++n >= 256) { octx.stroke(); octx.beginPath(); n = 0; }
@@ -480,7 +527,7 @@ function drawOverlay() {
     octx.globalAlpha = 1;
   }
   if (selConn >= 0) {
-    const x1 = xOf(posF[selConn]), x2 = xOf(posT[selConn]);
+    const x1 = xOf(aPosF[selConn]), x2 = xOf(aPosT[selConn]);
     octx.save();
     octx.shadowColor = '#d4af37'; octx.shadowBlur = 12;
     octx.strokeStyle = '#ffd95e'; octx.lineWidth = 2.4; octx.globalAlpha = 1;
@@ -500,8 +547,13 @@ function connTouches(i, chap, verse) {
 }
 /* ============ HIT TESTING ============ */
 function bookAtX(x) {
+  if (timeline) { // books are gapped in timeline mode — snap to nearest center
+    let best = -1, bd = 1e9;
+    for (let b = 0; b < NB; b++) { const d = Math.abs(x - xOf(tlCenter[b])); if (d < bd) { bd = d; best = b; } }
+    return bd < 22 ? best : -1;
+  }
   for (let b = 0; b < NB; b++)
-    if (x >= xOf(bookVStart[b]) && x < xOf(bookVEnd[b])) return b;
+    if (x >= xOf(aBS[b]) && x < xOf(aBE[b])) return b;
   return -1;
 }
 function distToArc(px, py, x1, x2) {
@@ -531,7 +583,7 @@ function hitArc(px, py) {
   let best = -1, bd = 7;
   for (const i of cand) {
     if (!passes(i)) continue;
-    const x1 = xOf(posF[i]), x2 = xOf(posT[i]);
+    const x1 = xOf(aPosF[i]), x2 = xOf(aPosT[i]);
     if ((x1 < -8 && x2 < -8) || (x1 > W + 8 && x2 > W + 8)) continue;
     if (px < Math.min(x1, x2) - 8 || px > Math.max(x1, x2) + 8) continue;
     const d = distToArc(px, py, x1, x2);
@@ -698,8 +750,8 @@ function applySearch(q) {
   return true;
 }
 function zoomToBook(b) {
-  const f1 = bookVStart[b], f2 = bookVEnd[b];
-  const span = f2 - f1;
+  const f1 = aBS[b], f2 = aBE[b];
+  const span = Math.max(f2 - f1, timeline ? TL_GAP * 6 : 0);
   zoom = Math.max(1, Math.min(60, 0.55 / span));
   panX = ((f1 + f2) / 2) * W * zoom - W / 2;
   clampPan(); renderBase(); drawOverlay();
@@ -730,6 +782,16 @@ document.querySelectorAll('.fbtn').forEach(b => b.onclick = () => {
 const mv = document.getElementById('minvotes');
 mv.oninput = () => { minVotes = +mv.value; document.getElementById('mvval').textContent = mv.value; };
 mv.onchange = () => { renderBase(); drawOverlay(); };
+/* ===== TIMELINE TOGGLE ===== */
+const tlBtn = document.getElementById('tlbtn');
+tlBtn.onclick = () => {
+  timeline = !timeline;
+  aPosF = timeline ? tlPosF : posF; aPosT = timeline ? tlPosT : posT;
+  aBS = timeline ? tlBookStart : bookVStart; aBE = timeline ? tlBookEnd : bookVEnd;
+  tlBtn.classList.toggle('active', timeline);
+  tlBtn.textContent = timeline ? 'Timeline ✓' : 'Timeline';
+  zoom = 1; panX = 0; clampPan(); renderBase(); drawOverlay();
+};
 /* ============ POINTER / ZOOM ============ */
 const tooltip = document.getElementById('tooltip');
 let dragging = false, dragMoved = false, lastX = 0, pinch = null;
