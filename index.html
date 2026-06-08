@@ -38,6 +38,17 @@ canvas{position:absolute;inset:0;display:block}
 #tooltip .mut{color:var(--muted)}
 #panel{position:absolute;top:0;right:0;bottom:0;width:min(360px,92vw);background:rgba(26,26,46,.97);border-left:1px solid #2e2e55;transform:translateX(105%);transition:transform .25s ease;z-index:10;display:flex;flex-direction:column}
 #panel.open{transform:none}
+.tpanel{position:absolute;top:0;right:0;bottom:0;width:min(360px,92vw);background:rgba(26,26,46,.97);border-left:1px solid #2e2e55;transform:translateX(105%);transition:transform .25s ease;z-index:10;display:flex;flex-direction:column}
+.tpanel.open{transform:none}
+.tpanel .phead{padding:14px 16px;border-bottom:1px solid #2e2e55;display:flex;align-items:center;gap:10px}
+.tpanel .phead h2{font-size:15px;color:var(--gold);flex:1;line-height:1.3}
+#tpclose{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px}
+#tpclose:hover{color:var(--gold)}
+#tpbody{padding:14px 16px;overflow-y:auto;flex:1}
+.prole{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11px;margin:0 5px 8px 0;border:1px solid}
+.kin a{color:var(--gold);cursor:pointer;text-decoration:none}
+.kin a:hover{text-decoration:underline}
+@media (max-width:700px){ .tpanel{width:100vw;border-left:none;border-top:1px solid #2e2e55} #treebar{gap:6px} }
 #panel .phead{padding:14px 16px;border-bottom:1px solid #2e2e55;display:flex;align-items:center;gap:10px}
 #panel .phead h2{font-size:15px;color:var(--gold);flex:1;line-height:1.3}
 #pclose,#pback{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px}
@@ -80,6 +91,37 @@ footer{display:flex;gap:16px;align-items:center;padding:7px 16px;background:var(
   .wcard{padding:18px;max-height:86dvh;overflow-y:auto}
 }
 body.embed header h1,body.embed footer{display:none}
+/* view tabs */
+#viewtabs{display:flex;gap:4px;background:#12122a;border:1px solid #2a2a4a;border-radius:9px;padding:3px}
+.vtab{background:none;border:none;color:var(--muted);font-size:13px;padding:5px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.vtab.active{background:var(--gold);color:#1a1a2e;font-weight:600}
+/* family tree */
+#treeStage{position:absolute;inset:0;display:none}
+body.view-tree #stage{display:none}
+body.view-tree #treeStage{display:block}
+body.view-tree #searchwrap,body.view-tree header .ctrl{display:none}
+body.view-tree #footer-xref{display:none}
+#footer-tree{display:none}
+body.view-tree #footer-tree{display:flex}
+#treeSvg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
+#treeSvg.drag{cursor:grabbing}
+#treebar{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;align-items:center;z-index:6;pointer-events:none;flex-wrap:wrap}
+#treebar>*{pointer-events:auto}
+#treesearchwrap{position:relative;flex:1;min-width:160px;max-width:300px}
+#treesearch{width:100%;padding:7px 12px;border-radius:8px;border:1px solid #34345c;background:rgba(18,18,42,.92);color:var(--text);outline:none;font-size:13px}
+#treesearch:focus{border-color:var(--gold)}
+#treesug{position:absolute;top:36px;left:0;right:0;background:var(--card2);border:1px solid #34345c;border-radius:8px;max-height:240px;overflow:auto;display:none;z-index:30}
+#treesug div{padding:7px 12px;cursor:pointer;font-size:13px}
+#treesug div:hover{background:#2e2e55}
+.node-chip{cursor:pointer}
+.node-chip rect{transition:fill .15s}
+.node-label{font:600 11px -apple-system,sans-serif;fill:var(--text);pointer-events:none;dominant-baseline:middle}
+.node-sub{font:9px -apple-system,sans-serif;fill:var(--muted);pointer-events:none}
+.expander{cursor:pointer}
+.expander circle{fill:#26264a;stroke:var(--gold);stroke-width:1}
+.expander text{fill:var(--gold);font:700 10px -apple-system,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.tedge{fill:none;stroke:#3a3a66;stroke-width:1.4}
+.tedge.line{stroke:var(--gold);stroke-width:2.2;opacity:.85}
 .tip{position:relative;cursor:help;border-bottom:1px dotted var(--muted)}
 .tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#22224a;border:1px solid var(--gold);color:var(--text);padding:9px 11px;border-radius:8px;width:230px;font-size:12px;line-height:1.45;z-index:60;white-space:normal;text-transform:none;letter-spacing:0;font-weight:400;box-shadow:0 6px 22px rgba(0,0,0,.55)}
 #welcome{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(13,13,26,.82);backdrop-filter:blur(3px);z-index:70;padding:16px}
@@ -96,6 +138,10 @@ body.embed header h1,body.embed footer{display:none}
 <body>
 <header>
   <h1>&#10022; Scripture Explorer</h1>
+  <div id="viewtabs">
+    <button class="vtab active" data-v="xref">Cross-References</button>
+    <button class="vtab" data-v="tree">Family Tree</button>
+  </div>
   <span class="stats" id="stats"></span>
   <div id="searchwrap">
     <input id="search" placeholder="Search a book or verse… e.g. John 3:16" autocomplete="off">
@@ -144,14 +190,39 @@ body.embed header h1,body.embed footer{display:none}
     </div>
     <div id="pbody"></div>
   </aside>
+  <div id="treeStage">
+    <svg id="treeSvg"><g id="treeRoot"></g></svg>
+    <div id="treebar">
+      <div id="treesearchwrap">
+        <input id="treesearch" placeholder="Find a person… e.g. David" autocomplete="off">
+        <div id="treesug"></div>
+      </div>
+      <button class="btn" id="texpand">Expand all</button>
+      <button class="btn" id="tcollapse">Line only</button>
+      <button class="btn" id="tzin">+</button>
+      <button class="btn" id="tzout">&minus;</button>
+      <button class="btn" id="treset">Reset</button>
+    </div>
+    <aside id="tpanel" class="tpanel">
+      <div class="phead"><h2 id="tptitle">Person</h2><button id="tpclose" title="Close">&#10005;</button></div>
+      <div id="tpbody"></div>
+    </aside>
+  </div>
 </div>
-<footer>
+<footer id="footer-xref">
   <span class="leg"><i style="background:var(--purple)"></i> Nearby books</span>
   <span class="leg"><i style="background:var(--green)"></i> Medium span</span>
   <span class="leg"><i style="background:var(--orange)"></i> Long span</span>
   <span class="leg"><i style="background:var(--red)"></i> Full-Bible span</span>
   <span>Data: OpenBible.info (CC-BY) · Text: WEB via bible.helloao.org</span>
   <span id="hint">Scroll to zoom &middot; drag to pan &middot; tap a book or arc</span>
+</footer>
+<footer id="footer-tree">
+  <span class="leg"><i style="background:var(--gold)"></i> Line of Messiah</span>
+  <span class="leg"><i style="background:#8b5cf6"></i> King of Judah</span>
+  <span class="leg"><i style="background:#34d399"></i> Levitical priest</span>
+  <span class="leg"><i style="background:#5b8bf0"></i> Son of Jacob (tribe)</span>
+  <span>Curated from public-domain WEB · 92 people, Adam → Jesus</span>
 </footer>
 <script>
 // Generated from OpenBible.info cross-references (CC-BY)
@@ -160,16 +231,122 @@ const VPC=[31,25,24,26,32,22,24,22,29,32,32,20,18,24,21,16,27,33,38,18,34,24,20,
 const CONN_COUNT=344799;
 </script>
 <script>
+/* Bible Family Tree — the Line of Messiah + key branches.
+   Curated from the public-domain World English Bible text. Facts only (X is the
+   child of Y) with verse citations; original structure — no third-party dataset.
+   tags: line (line of Messiah, gold) · patriarch · king (kings of Judah) ·
+         priest (Levitical) · tribe (son of Jacob) · branch
+   ref = OSIS-style for live verse lookup (book.chapter.verse). */
+const GEN_PEOPLE = [
+  // ---- Antediluvian line (Genesis 5) ----
+  { id:'adam', name:'Adam', father:null, spouse:'Eve', ref:'Gen.5.1', refs:['Gen.1.27','Gen.5.1-Gen.5.5'], tags:['line','patriarch'], note:'The first man; lived 930 years.' },
+  { id:'cain', name:'Cain', father:'adam', ref:'Gen.4.1', tags:['branch'] },
+  { id:'abel', name:'Abel', father:'adam', ref:'Gen.4.2', tags:['branch'], note:'Slain by his brother Cain.' },
+  { id:'seth', name:'Seth', father:'adam', ref:'Gen.5.3', tags:['line'], note:'Appointed by God in place of Abel.' },
+  { id:'enosh', name:'Enosh', father:'seth', ref:'Gen.5.6', tags:['line'] },
+  { id:'kenan', name:'Kenan', father:'enosh', ref:'Gen.5.9', tags:['line'] },
+  { id:'mahalalel', name:'Mahalalel', father:'kenan', ref:'Gen.5.12', tags:['line'] },
+  { id:'jared', name:'Jared', father:'mahalalel', ref:'Gen.5.15', tags:['line'] },
+  { id:'enoch', name:'Enoch', father:'jared', ref:'Gen.5.18', tags:['line'], note:'"Walked with God, and he was not, for God took him." (Gen 5:24)' },
+  { id:'methuselah', name:'Methuselah', father:'enoch', ref:'Gen.5.21', tags:['line'], note:'Longest-lived man; 969 years.' },
+  { id:'lamech', name:'Lamech', father:'methuselah', ref:'Gen.5.25', tags:['line'] },
+  { id:'noah', name:'Noah', father:'lamech', ref:'Gen.5.29', refs:['Gen.5.28-Gen.5.29','Gen.6.8','Gen.9.1'], tags:['line','patriarch'], note:'Built the ark; survived the flood with his family.' },
+  // ---- Noah's sons (Genesis 10) ----
+  { id:'japheth', name:'Japheth', father:'noah', ref:'Gen.10.2', tags:['branch'], note:'Father of the northern nations.' },
+  { id:'ham', name:'Ham', father:'noah', ref:'Gen.10.6', tags:['branch'], note:'Father of Cush, Egypt, Canaan.' },
+  { id:'shem', name:'Shem', father:'noah', ref:'Gen.11.10', refs:['Gen.10.21','Gen.11.10'], tags:['line'], note:'Forefather of the Semitic peoples.' },
+  // ---- Shem to Abraham (Genesis 11) ----
+  { id:'arphaxad', name:'Arphaxad', father:'shem', ref:'Gen.11.12', tags:['line'] },
+  { id:'shelah', name:'Shelah', father:'arphaxad', ref:'Gen.11.14', tags:['line'] },
+  { id:'eber', name:'Eber', father:'shelah', ref:'Gen.11.16', tags:['line'], note:'Name linked to "Hebrew."' },
+  { id:'peleg', name:'Peleg', father:'eber', ref:'Gen.11.18', tags:['line'], note:'"For in his days the earth was divided." (Gen 10:25)' },
+  { id:'joktan', name:'Joktan', father:'eber', ref:'Gen.10.25', tags:['branch'] },
+  { id:'reu', name:'Reu', father:'peleg', ref:'Gen.11.20', tags:['line'] },
+  { id:'serug', name:'Serug', father:'reu', ref:'Gen.11.22', tags:['line'] },
+  { id:'nahor', name:'Nahor', father:'serug', ref:'Gen.11.24', tags:['line'] },
+  { id:'terah', name:'Terah', father:'nahor', ref:'Gen.11.26', tags:['line'] },
+  { id:'haran', name:'Haran', father:'terah', ref:'Gen.11.27', tags:['branch'] },
+  { id:'lot', name:'Lot', father:'haran', ref:'Gen.11.27', tags:['branch'], note:'Rescued from Sodom; father of Moab and Ammon.' },
+  // ---- Patriarchs ----
+  { id:'abraham', name:'Abraham', father:'terah', spouse:'Sarah', ref:'Gen.17.5', refs:['Gen.12.1-Gen.12.3','Gen.17.5','Gen.21.1-Gen.21.3'], tags:['line','patriarch'], note:'Abram renamed Abraham; "the father of many nations." Covenant of blessing to all peoples.' },
+  { id:'ishmael', name:'Ishmael', father:'abraham', spouse:'Hagar', ref:'Gen.16.15', refs:['Gen.16.15','Gen.25.12-Gen.25.16'], tags:['branch'], note:'Father of twelve princes.' },
+  { id:'isaac', name:'Isaac', father:'abraham', spouse:'Rebekah', ref:'Gen.21.3', refs:['Gen.21.1-Gen.21.5','Gen.26.3-Gen.26.4'], tags:['line','patriarch'], note:'The child of promise; offered on Mount Moriah.' },
+  { id:'esau', name:'Esau', father:'isaac', ref:'Gen.25.25', refs:['Gen.25.25','Gen.36.1'], tags:['branch'], note:'Also called Edom; sold his birthright.' },
+  { id:'jacob', name:'Jacob (Israel)', father:'isaac', spouse:'Leah & Rachel', ref:'Gen.25.26', refs:['Gen.25.26','Gen.32.28','Gen.35.10'], tags:['line','patriarch'], note:'Renamed Israel; father of the twelve tribes.' },
+  // ---- Twelve sons of Jacob (Genesis 35:23-26) ----
+  { id:'reuben', name:'Reuben', father:'jacob', ref:'Gen.29.32', tags:['tribe'], note:'Firstborn (mother Leah).' },
+  { id:'simeon', name:'Simeon', father:'jacob', ref:'Gen.29.33', tags:['tribe'], note:'Mother Leah.' },
+  { id:'levi', name:'Levi', father:'jacob', ref:'Gen.29.34', tags:['tribe'], note:'Mother Leah; the priestly tribe.' },
+  { id:'judah', name:'Judah', father:'jacob', ref:'Gen.29.35', refs:['Gen.29.35','Gen.49.10'], tags:['line','tribe'], note:'Mother Leah. "The scepter will not depart from Judah." The royal, Messianic tribe.' },
+  { id:'dan', name:'Dan', father:'jacob', ref:'Gen.30.6', tags:['tribe'], note:'Mother Bilhah.' },
+  { id:'naphtali', name:'Naphtali', father:'jacob', ref:'Gen.30.8', tags:['tribe'], note:'Mother Bilhah.' },
+  { id:'gad', name:'Gad', father:'jacob', ref:'Gen.30.11', tags:['tribe'], note:'Mother Zilpah.' },
+  { id:'asher', name:'Asher', father:'jacob', ref:'Gen.30.13', tags:['tribe'], note:'Mother Zilpah.' },
+  { id:'issachar', name:'Issachar', father:'jacob', ref:'Gen.30.18', tags:['tribe'], note:'Mother Leah.' },
+  { id:'zebulun', name:'Zebulun', father:'jacob', ref:'Gen.30.20', tags:['tribe'], note:'Mother Leah.' },
+  { id:'joseph', name:'Joseph', father:'jacob', ref:'Gen.30.24', refs:['Gen.30.24','Gen.41.41'], tags:['tribe'], note:'Mother Rachel; sold into Egypt, rose to governor. Father of Ephraim and Manasseh.' },
+  { id:'benjamin', name:'Benjamin', father:'jacob', ref:'Gen.35.18', tags:['tribe'], note:'Mother Rachel; the youngest son.' },
+  { id:'dinah', name:'Dinah', father:'jacob', ref:'Gen.30.21', tags:['branch'], note:'Daughter of Jacob and Leah.' },
+  // ---- Levi → Aaron & Moses (Exodus 6:16-20) ----
+  { id:'kohath', name:'Kohath', father:'levi', ref:'Exod.6.16', tags:['priest'] },
+  { id:'amram', name:'Amram', father:'kohath', spouse:'Jochebed', ref:'Exod.6.18', tags:['priest'] },
+  { id:'aaron', name:'Aaron', father:'amram', ref:'Exod.6.20', refs:['Exod.6.20','Exod.28.1'], tags:['priest'], note:'First high priest of Israel.' },
+  { id:'moses', name:'Moses', father:'amram', ref:'Exod.6.20', refs:['Exod.2.1-Exod.2.10','Exod.6.20'], tags:['priest'], note:'Led Israel out of Egypt; received the Law.' },
+  { id:'miriam', name:'Miriam', father:'amram', ref:'Num.26.59', tags:['branch'], note:'Prophetess; sister of Moses and Aaron.' },
+  // ---- Judah → Perez → David (Ruth 4:18-22) ----
+  { id:'er', name:'Er', father:'judah', ref:'Gen.38.3', tags:['branch'] },
+  { id:'onan', name:'Onan', father:'judah', ref:'Gen.38.4', tags:['branch'] },
+  { id:'shelah2', name:'Shelah', father:'judah', ref:'Gen.38.5', tags:['branch'] },
+  { id:'perez', name:'Perez', father:'judah', ref:'Gen.38.29', refs:['Gen.38.29','Ruth.4.18'], tags:['line'], note:'Mother Tamar; twin of Zerah.' },
+  { id:'zerah', name:'Zerah', father:'judah', ref:'Gen.38.30', tags:['branch'], note:'Mother Tamar.' },
+  { id:'hezron', name:'Hezron', father:'perez', ref:'Ruth.4.18', tags:['line'] },
+  { id:'ram', name:'Ram', father:'hezron', ref:'Ruth.4.19', tags:['line'] },
+  { id:'amminadab', name:'Amminadab', father:'ram', ref:'Ruth.4.19', tags:['line'] },
+  { id:'nahshon', name:'Nahshon', father:'amminadab', ref:'Ruth.4.20', refs:['Ruth.4.20','Num.1.7'], tags:['line'], note:'A prince of the tribe of Judah in the wilderness.' },
+  { id:'salmon', name:'Salmon', father:'nahshon', spouse:'Rahab', ref:'Ruth.4.21', refs:['Ruth.4.21','Matt.1.5'], tags:['line'], note:'Married Rahab of Jericho (Matt 1:5).' },
+  { id:'boaz', name:'Boaz', father:'salmon', spouse:'Ruth', ref:'Ruth.4.21', refs:['Ruth.2.1','Ruth.4.13','Ruth.4.21'], tags:['line'], note:'Kinsman-redeemer who married Ruth the Moabite.' },
+  { id:'obed', name:'Obed', father:'boaz', ref:'Ruth.4.21', refs:['Ruth.4.17','Ruth.4.21'], tags:['line'], note:'Son of Boaz and Ruth.' },
+  { id:'jesse', name:'Jesse', father:'obed', ref:'Ruth.4.22', refs:['Ruth.4.22','1Sam.16.1'], tags:['line'] },
+  { id:'david', name:'David', father:'jesse', spouse:'Bathsheba (& others)', ref:'Ruth.4.22', refs:['1Sam.16.13','2Sam.7.12-2Sam.7.16'], tags:['line','king'], note:'Shepherd, king, and ancestor of Messiah by covenant.' },
+  // ---- David's sons ----
+  { id:'absalom', name:'Absalom', father:'david', ref:'2Sam.3.3', tags:['branch'], note:'Rebelled against his father David.' },
+  { id:'nathan_s', name:'Nathan', father:'david', ref:'2Sam.5.14', refs:['2Sam.5.14','Luke.3.31'], tags:['branch'], note:"Luke's genealogy of Jesus runs through Nathan rather than Solomon (Luke 3:31)." },
+  { id:'solomon', name:'Solomon', father:'david', ref:'2Sam.12.24', refs:['2Sam.12.24','1Kgs.3.12'], tags:['line','king'], note:'Mother Bathsheba; built the temple; renowned for wisdom.' },
+  // ---- Kings of Judah (Matthew 1:7-11) ----
+  { id:'rehoboam', name:'Rehoboam', father:'solomon', ref:'Matt.1.7', refs:['1Kgs.11.43','Matt.1.7'], tags:['line','king'], note:'In his reign the kingdom divided.' },
+  { id:'abijah', name:'Abijah', father:'rehoboam', ref:'Matt.1.7', tags:['line','king'] },
+  { id:'asa', name:'Asa', father:'abijah', ref:'Matt.1.7', tags:['line','king'], note:'A king who did right before the Lord.' },
+  { id:'jehoshaphat', name:'Jehoshaphat', father:'asa', ref:'Matt.1.8', tags:['line','king'] },
+  { id:'joram', name:'Joram', father:'jehoshaphat', ref:'Matt.1.8', tags:['line','king'], note:'Matthew lists Uzziah next, summarizing three intervening kings.' },
+  { id:'uzziah', name:'Uzziah', father:'joram', ref:'Matt.1.8', refs:['Matt.1.8','2Chr.26.4'], tags:['line','king'], note:'Also called Azariah; reigned 52 years.' },
+  { id:'jotham', name:'Jotham', father:'uzziah', ref:'Matt.1.9', tags:['line','king'] },
+  { id:'ahaz', name:'Ahaz', father:'jotham', ref:'Matt.1.9', tags:['line','king'], note:'To him Isaiah gave the sign of Immanuel (Isa 7:14).' },
+  { id:'hezekiah', name:'Hezekiah', father:'ahaz', ref:'Matt.1.9', refs:['Matt.1.9','2Kgs.18.5'], tags:['line','king'], note:'A great reformer king who trusted the Lord.' },
+  { id:'manasseh', name:'Manasseh', father:'hezekiah', ref:'Matt.1.10', tags:['line','king'], note:'Reigned 55 years; repented late in life.' },
+  { id:'amon', name:'Amon', father:'manasseh', ref:'Matt.1.10', tags:['line','king'] },
+  { id:'josiah', name:'Josiah', father:'amon', ref:'Matt.1.10', refs:['Matt.1.10','2Kgs.22.1-2Kgs.22.2'], tags:['line','king'], note:'Rediscovered the Book of the Law; led great reform.' },
+  { id:'jeconiah', name:'Jeconiah', father:'josiah', ref:'Matt.1.11', refs:['Matt.1.11','2Kgs.24.15'], tags:['line','king'], note:'Also Jehoiachin; carried to Babylon in the exile.' },
+  // ---- Post-exile line to Joseph (Matthew 1:12-16) ----
+  { id:'shealtiel', name:'Shealtiel', father:'jeconiah', ref:'Matt.1.12', tags:['line'] },
+  { id:'zerubbabel', name:'Zerubbabel', father:'shealtiel', ref:'Matt.1.12', refs:['Matt.1.12','Ezra.3.2'], tags:['line'], note:'Led the return from exile and rebuilt the temple.' },
+  { id:'abiud', name:'Abiud', father:'zerubbabel', ref:'Matt.1.13', tags:['line'] },
+  { id:'eliakim', name:'Eliakim', father:'abiud', ref:'Matt.1.13', tags:['line'] },
+  { id:'azor', name:'Azor', father:'eliakim', ref:'Matt.1.13', tags:['line'] },
+  { id:'zadok', name:'Zadok', father:'azor', ref:'Matt.1.14', tags:['line'] },
+  { id:'achim', name:'Achim', father:'zadok', ref:'Matt.1.14', tags:['line'] },
+  { id:'eliud', name:'Eliud', father:'achim', ref:'Matt.1.14', tags:['line'] },
+  { id:'eleazar', name:'Eleazar', father:'eliud', ref:'Matt.1.15', tags:['line'] },
+  { id:'matthan', name:'Matthan', father:'eleazar', ref:'Matt.1.15', tags:['line'] },
+  { id:'jacob2', name:'Jacob', father:'matthan', ref:'Matt.1.15', tags:['line'] },
+  { id:'joseph_nt', name:'Joseph', father:'jacob2', spouse:'Mary', ref:'Matt.1.16', refs:['Matt.1.16','Luke.2.4'], tags:['line'], note:'Husband of Mary; of the house of David.' },
+  { id:'jesus', name:'Jesus the Messiah', father:'joseph_nt', ref:'Matt.1.16', refs:['Matt.1.16','Luke.3.23','Luke.1.31-Luke.1.33'], tags:['line'], note:'Born of Mary; called the Son of David and Son of God.' },
+];
+</script>
+<script>
 (async () => {
-  try {
-    const r = await fetch('data.bin');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    window.CONN_BYTES = new Uint8Array(await r.arrayBuffer());
-  } catch (e) {
-    const m = document.getElementById('loadmsg');
-    if (m) m.textContent = 'Could not load connection data (' + e.message + '). Refresh to retry.';
-    return;
-  }
+  try { const r = await fetch('data.bin'); if(!r.ok) throw new Error('HTTP '+r.status);
+    window.CONN_BYTES = new Uint8Array(await r.arrayBuffer()); }
+  catch(e){ const m=document.getElementById('loadmsg'); if(m) m.textContent='Could not load data ('+e.message+'). Refresh to retry.'; return; }
 'use strict';
 /* ============ DECODE DATA ============ */
 const N = CONN_COUNT;
@@ -720,6 +897,23 @@ async function loadVerse(chapG, verse, id) {
     }
   }
 }
+// shared helpers exposed for the Family Tree view (verse text by OSIS ref, e.g. "Gen.5.3")
+const OSIS_IDX = Object.fromEntries(BOOKS.map((b, i) => [b.osis, i]));
+async function loadVerseByRef(osis, elSel) {
+  const el = () => document.querySelector(elSel);
+  const first = String(osis).split('-')[0].split('.');
+  const b = OSIS_IDX[first[0]], ch = +first[1], v = +first[2];
+  if (b === undefined || !ch || !v) { if (el()) el().textContent = ''; return; }
+  try {
+    const j = await fetchChapter(b, ch);
+    const h = verseHtml(j, v);
+    if (!h) throw new Error('miss');
+    if (el()) { el().innerHTML = '“' + h + '”'; el().classList.remove('mut'); }
+  } catch (e) {
+    if (el()) el().textContent = 'Verse text unavailable (offline).';
+  }
+}
+window.__SE = { loadVerseByRef, esc, resizeXref: () => resize() };
 /* ============ SEARCH ============ */
 const searchEl = document.getElementById('search'), suggest = document.getElementById('suggest');
 function norm(s) { return s.toLowerCase().replace(/[^a-z0-9:]/g, ''); }
@@ -913,6 +1107,247 @@ try {
   }
 } catch (e) {}
 
+})();
+</script>
+<script>
+'use strict';
+/* ===================== FAMILY TREE VIEW ===================== */
+(function () {
+  const esc = s => (window.__SE ? window.__SE.esc(String(s)) : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'));
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const ROLE = {
+    line:   { c: '#d4af37', label: 'Line of Messiah' },
+    king:   { c: '#8b5cf6', label: 'King of Judah' },
+    priest: { c: '#34d399', label: 'Levitical priest' },
+    tribe:  { c: '#5b8bf0', label: 'Son of Jacob' },
+    patriarch: { c: '#d4af37', label: 'Patriarch' },
+    branch: { c: '#6a668a', label: '' },
+  };
+  function roleOf(p) { // first meaningful tag for coloring
+    for (const t of ['line','king','priest','tribe']) if (p.tags.includes(t)) return t;
+    return 'branch';
+  }
+  // build node graph
+  const byId = {}; let people = [];
+  function initData() {
+    people = GEN_PEOPLE.map(p => Object.assign({ children: [], expanded: false }, p));
+    people.forEach(p => byId[p.id] = p);
+    people.forEach(p => { if (p.father && byId[p.father]) byId[p.father].children.push(p); });
+  }
+  const isLine = p => p.tags.includes('line');
+  // visible children: the line-child always shows; others only when node is expanded
+  function visKids(p) { return p.expanded ? p.children : p.children.filter(isLine); }
+  function hiddenCount(p) { return p.expanded ? 0 : p.children.filter(c => !isLine(c)).length; }
+
+  const COLW = 168, ROW = 78, PAD = 60, CHIP_W = 132, CHIP_H = 34;
+  let svg, gRoot, root, tx = 0, ty = 0, scale = 1, laidOut = false, selId = null;
+
+  function layout() {
+    let nextX = 0;
+    (function walk(n, depth) {
+      n.y = depth;
+      const kids = visKids(n);
+      if (!kids.length) { n.x = nextX++; }
+      else { kids.forEach(k => walk(k, depth + 1)); n.x = (kids[0].x + kids[kids.length - 1].x) / 2; }
+    })(root, 0);
+  }
+  function nodePx(n) { return { x: n.x * COLW + PAD, y: n.y * ROW + PAD }; }
+
+  function curve(x1, y1, x2, y2) {
+    const my = (y1 + y2) / 2;
+    return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+  }
+  function render() {
+    layout();
+    while (gRoot.firstChild) gRoot.removeChild(gRoot.firstChild);
+    const edges = document.createElementNS(SVGNS, 'g');
+    const nodes = document.createElementNS(SVGNS, 'g');
+    gRoot.appendChild(edges); gRoot.appendChild(nodes);
+    let maxX = 0, maxY = 0;
+    (function draw(n) {
+      const pp = nodePx(n);
+      maxX = Math.max(maxX, pp.x); maxY = Math.max(maxY, pp.y);
+      for (const k of visKids(n)) {
+        const kp = nodePx(k);
+        const e = document.createElementNS(SVGNS, 'path');
+        e.setAttribute('d', curve(pp.x, pp.y + CHIP_H / 2, kp.x, kp.y - CHIP_H / 2));
+        e.setAttribute('class', 'tedge' + (isLine(n) && isLine(k) ? ' line' : ''));
+        edges.appendChild(e);
+        draw(k);
+      }
+      nodes.appendChild(chip(n, pp));
+    })(root);
+    gRoot.setAttribute('data-w', maxX + PAD); gRoot.setAttribute('data-h', maxY + PAD);
+  }
+  function chip(n, pp) {
+    const role = roleOf(n), col = ROLE[role].c;
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-chip');
+    g.setAttribute('transform', `translate(${pp.x},${pp.y})`);
+    const r = document.createElementNS(SVGNS, 'rect');
+    const w = CHIP_W, h = CHIP_H, ln = isLine(n);
+    r.setAttribute('x', -w / 2); r.setAttribute('y', -h / 2);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('rx', 8);
+    r.setAttribute('fill', selId === n.id ? '#3a3357' : '#1a1a2e');
+    r.setAttribute('stroke', col);
+    r.setAttribute('stroke-width', ln ? 2 : 1.2);
+    g.appendChild(r);
+    if (ln) { // gold dot marking the Messianic spine
+      const d = document.createElementNS(SVGNS, 'circle');
+      d.setAttribute('cx', -w / 2 + 11); d.setAttribute('cy', 0); d.setAttribute('r', 3.2);
+      d.setAttribute('fill', '#d4af37'); g.appendChild(d);
+    }
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('class', 'node-label'); t.setAttribute('x', ln ? -w / 2 + 20 : 0);
+    t.setAttribute('y', 1); t.setAttribute('text-anchor', ln ? 'start' : 'middle');
+    let nm = n.name; if (nm.length > 15) nm = nm.slice(0, 14) + '…';
+    t.textContent = nm; g.appendChild(t);
+    g.addEventListener('click', ev => { ev.stopPropagation(); openPerson(n.id); });
+    const hc = hiddenCount(n);
+    if (hc > 0 || (n.expanded && n.children.some(c => !isLine(c)))) {
+      const ex = document.createElementNS(SVGNS, 'g');
+      ex.setAttribute('class', 'expander');
+      ex.setAttribute('transform', `translate(${w / 2},${h / 2})`);
+      const c = document.createElementNS(SVGNS, 'circle'); c.setAttribute('r', 9); ex.appendChild(c);
+      const xt = document.createElementNS(SVGNS, 'text');
+      xt.textContent = n.expanded ? '−' : '+' + hc;
+      xt.setAttribute('font-size', n.expanded ? '13' : '9'); ex.appendChild(xt);
+      ex.addEventListener('click', ev => { ev.stopPropagation(); n.expanded = !n.expanded; render(); });
+      g.appendChild(ex);
+    }
+    return g;
+  }
+  function applyTransform() { gRoot.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`); }
+  function fit() {
+    const w = +gRoot.getAttribute('data-w'), h = +gRoot.getAttribute('data-h');
+    const vw = svg.clientWidth, vh = svg.clientHeight;
+    scale = Math.min(1, (vw - 20) / w);
+    tx = (vw - w * scale) / 2; ty = 16;
+    applyTransform();
+  }
+  function centerOn(n, z) {
+    const pp = nodePx(n); scale = z || Math.max(scale, 0.9);
+    tx = svg.clientWidth / 2 - pp.x * scale;
+    ty = svg.clientHeight / 2 - pp.y * scale;
+    applyTransform();
+  }
+
+  /* ---- person detail panel ---- */
+  const tpanel = () => document.getElementById('tpanel');
+  function openPerson(id) {
+    const n = byId[id]; if (!n) return;
+    selId = id; render();
+    const role = roleOf(n);
+    document.getElementById('tptitle').textContent = n.name;
+    const father = n.father && byId[n.father] ? byId[n.father] : null;
+    const kids = n.children;
+    const tagChips = n.tags.filter(t => ROLE[t] && ROLE[t].label).map(t =>
+      `<span class="prole" style="color:${ROLE[t].c};border-color:${ROLE[t].c}55;background:${ROLE[t].c}1a">${esc(ROLE[t].label)}</span>`).join('');
+    const refs = (n.refs && n.refs.length ? n.refs : [n.ref]).filter(Boolean);
+    let html = tagChips ? `<div style="margin-bottom:6px">${tagChips}</div>` : '';
+    html += `<div class="meta">`;
+    if (father) html += `<div class="m"><div class="k">Father</div><div class="v kin"><a data-go="${father.id}">${esc(father.name)}</a></div></div>`;
+    if (n.spouse) html += `<div class="m"><div class="k">Spouse</div><div class="v">${esc(n.spouse)}</div></div>`;
+    html += `<div class="m"><div class="k">Children</div><div class="v">${kids.length || '—'}</div></div>`;
+    html += `<div class="m"><div class="k">First named</div><div class="v">${esc((n.ref||'').replace(/\./g,' ').replace(/(\d) (\d)/,'$1:$2'))}</div></div>`;
+    html += `</div>`;
+    if (n.note) html += `<div class="expl">${esc(n.note)}</div>`;
+    if (kids.length) {
+      html += `<div class="sect">Children</div><div class="kin" style="line-height:2">`;
+      html += kids.map(k => `<a data-go="${k.id}">${esc(k.name)}</a>`).join('  ·  ');
+      html += `</div>`;
+    }
+    html += `<div class="sect">Scripture</div>`;
+    refs.forEach((rf, i) => {
+      const disp = rf.split('-')[0].replace(/\./g, ' ').replace(/(\D) (\d+) (\d+)/, '$1 $2:$3');
+      html += `<div class="vtext" id="tv${i}"><div class="vr">${esc(rf.replace(/\./g,' ').replace(/(\d+) (\d+)$/,'$1:$2'))}</div><div class="vt mut">Loading…</div></div>`;
+    });
+    document.getElementById('tpbody').innerHTML = html;
+    document.getElementById('tpbody').scrollTop = 0;
+    tpanel().classList.add('open');
+    document.querySelectorAll('#tpbody .kin a').forEach(a => a.onclick = () => openPerson(a.dataset.go));
+    refs.forEach((rf, i) => { if (window.__SE) window.__SE.loadVerseByRef(rf, '#tv' + i + ' .vt'); });
+    if (n.expanded === false && n.children.some(c => !isLine(c))) {} // leave expansion to the +button
+  }
+  document.getElementById('tpclose').onclick = () => tpanel().classList.remove('open');
+
+  /* ---- pan / zoom ---- */
+  function bindPointer() {
+    let drag = false, moved = false, lx = 0, ly = 0; const pts = new Map(); let pinch = null;
+    svg.addEventListener('pointerdown', e => {
+      svg.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+      if (pts.size === 2) { const v = [...pts.values()]; pinch = { d: Math.hypot(v[0][0]-v[1][0], v[0][1]-v[1][1]), s: scale, cx:(v[0][0]+v[1][0])/2, cy:(v[0][1]+v[1][1])/2 }; }
+      drag = true; moved = false; lx = e.offsetX; ly = e.offsetY; svg.classList.add('drag');
+    });
+    svg.addEventListener('pointermove', e => {
+      if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+      if (pts.size === 2 && pinch) { const v = [...pts.values()]; const d = Math.hypot(v[0][0]-v[1][0], v[0][1]-v[1][1]);
+        zoomAt(pinch.s * d / pinch.d, pinch.cx, pinch.cy); return; }
+      if (drag) { tx += e.offsetX - lx; ty += e.offsetY - ly; lx = e.offsetX; ly = e.offsetY;
+        if (Math.abs(e.offsetX - lx) > 1) moved = true; moved = moved || true; applyTransform(); }
+    });
+    svg.addEventListener('pointerup', e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; drag = false; svg.classList.remove('drag'); });
+    svg.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; drag = false; });
+    svg.addEventListener('wheel', e => { e.preventDefault(); zoomAt(scale * Math.exp(-e.deltaY * 0.0016), e.offsetX, e.offsetY); }, { passive: false });
+  }
+  function zoomAt(z, cx, cy) {
+    z = Math.max(0.2, Math.min(2.5, z));
+    const wx = (cx - tx) / scale, wy = (cy - ty) / scale;
+    scale = z; tx = cx - wx * scale; ty = cy - wy * scale; applyTransform();
+  }
+
+  /* ---- search ---- */
+  function bindSearch() {
+    const inp = document.getElementById('treesearch'), sug = document.getElementById('treesug');
+    inp.addEventListener('input', () => {
+      const q = inp.value.trim().toLowerCase();
+      if (q.length < 2) { sug.style.display = 'none'; return; }
+      const hits = people.filter(p => p.name.toLowerCase().includes(q)).slice(0, 10);
+      if (!hits.length) { sug.style.display = 'none'; return; }
+      sug.innerHTML = hits.map(p => `<div data-id="${p.id}">${esc(p.name)}${isLine(p) ? ' <span style="color:var(--gold)">✦</span>' : ''}</div>`).join('');
+      sug.style.display = 'block';
+      sug.querySelectorAll('div').forEach(d => d.onclick = () => { sug.style.display = 'none'; inp.value = byId[d.dataset.id].name; goTo(d.dataset.id); });
+    });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { const m = people.find(p => p.name.toLowerCase().includes(inp.value.trim().toLowerCase())); if (m) { sug.style.display='none'; goTo(m.id); } } });
+    document.addEventListener('click', e => { if (!e.target.closest('#treesearchwrap')) sug.style.display = 'none'; });
+  }
+  function goTo(id) { // expand ancestors so the person is visible, then center + open
+    let n = byId[id]; const chain = [];
+    while (n) { chain.push(n); n = n.father ? byId[n.father] : null; }
+    chain.reverse().forEach(a => { if (!isLine(byId[id]) || true) a.expanded = a.expanded || a.children.some(c => c.id === (chain[chain.indexOf(a)+1]||{}).id && !isLine(c)); });
+    // ensure every ancestor whose next-in-chain child is non-line gets expanded
+    for (let i = 0; i < chain.length - 1; i++) { const par = chain[i], ch = chain[i+1]; if (!isLine(ch)) par.expanded = true; }
+    render(); centerOn(byId[id], Math.max(scale, 0.9)); openPerson(id);
+  }
+
+  /* ---- controls ---- */
+  function bindControls() {
+    document.getElementById('texpand').onclick = () => { people.forEach(p => p.expanded = true); render(); fit(); };
+    document.getElementById('tcollapse').onclick = () => { people.forEach(p => p.expanded = false); selId = null; render(); fit(); tpanel().classList.remove('open'); };
+    document.getElementById('tzin').onclick = () => zoomAt(scale * 1.4, svg.clientWidth / 2, svg.clientHeight / 2);
+    document.getElementById('tzout').onclick = () => zoomAt(scale / 1.4, svg.clientWidth / 2, svg.clientHeight / 2);
+    document.getElementById('treset').onclick = () => { render(); fit(); };
+    svg.addEventListener('click', () => tpanel().classList.remove('open'));
+  }
+
+  function initTree() {
+    if (laidOut) return; laidOut = true;
+    svg = document.getElementById('treeSvg'); gRoot = document.getElementById('treeRoot');
+    initData(); root = byId['adam'];
+    render(); fit(); bindPointer(); bindSearch(); bindControls();
+    window.addEventListener('resize', () => { if (document.body.classList.contains('view-tree')) applyTransform(); });
+  }
+
+  /* ---- view tab switching ---- */
+  document.querySelectorAll('.vtab').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.vtab').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    const tree = b.dataset.v === 'tree';
+    document.body.classList.toggle('view-tree', tree);
+    if (tree) { initTree(); requestAnimationFrame(() => { if (!gRoot.getAttribute('data-fitted')) { fit(); gRoot.setAttribute('data-fitted','1'); } }); }
+    else if (window.__SE) window.__SE.resizeXref();
+  });
 })();
 </script>
 </body>
