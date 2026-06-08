@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scripture Cross-Reference Explorer — Dominion Christian Center</title>
+<style>
+:root{
+  --bg:#0d0d1a; --card:#1a1a2e; --card2:#222240; --gold:#d4af37; --text:#e8e6f0;
+  --muted:#9a96b8; --purple:#8b5cf6; --green:#34d399; --orange:#fb923c; --red:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--card);border-bottom:1px solid #2a2a4a;flex-wrap:wrap;z-index:5}
+header h1{font-size:17px;font-weight:600;color:var(--gold);white-space:nowrap}
+header .stats{color:var(--muted);font-size:12px;white-space:nowrap}
+#searchwrap{position:relative;flex:1;min-width:180px;max-width:340px}
+#search{width:100%;padding:7px 12px;border-radius:8px;border:1px solid #34345c;background:#12122a;color:var(--text);outline:none;font-size:13px}
+#search:focus{border-color:var(--gold)}
+#suggest{position:absolute;top:36px;left:0;right:0;background:var(--card2);border:1px solid #34345c;border-radius:8px;max-height:220px;overflow:auto;display:none;z-index:30}
+#suggest div{padding:7px 12px;cursor:pointer;font-size:13px}
+#suggest div:hover{background:#2e2e55}
+.ctrl{display:flex;align-items:center;gap:8px}
+.btn{background:#26264a;border:1px solid #3a3a66;color:var(--text);border-radius:7px;padding:6px 11px;cursor:pointer;font-size:13px}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn.active{background:var(--gold);color:#1a1a2e;border-color:var(--gold);font-weight:600}
+label.sl{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--gold);width:90px}
+#stage{position:relative;flex:1;min-height:0}
+canvas{position:absolute;inset:0;display:block}
+#overlay{cursor:grab}
+#overlay.drag{cursor:grabbing}
+#progress{position:absolute;top:0;left:0;height:2px;background:var(--gold);width:0%;transition:width .15s;z-index:4}
+#tooltip{position:absolute;pointer-events:none;background:rgba(20,20,40,.95);border:1px solid var(--gold);border-radius:8px;padding:8px 11px;font-size:12px;display:none;z-index:20;max-width:260px;box-shadow:0 4px 18px rgba(0,0,0,.5)}
+#tooltip b{color:var(--gold)}
+#tooltip .mut{color:var(--muted)}
+#panel{position:absolute;top:0;right:0;bottom:0;width:min(360px,92vw);background:rgba(26,26,46,.97);border-left:1px solid #2e2e55;transform:translateX(105%);transition:transform .25s ease;z-index:10;display:flex;flex-direction:column}
+#panel.open{transform:none}
+#panel .phead{padding:14px 16px;border-bottom:1px solid #2e2e55;display:flex;align-items:center;gap:10px}
+#panel .phead h2{font-size:15px;color:var(--gold);flex:1;line-height:1.3}
+#pclose,#pback{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px}
+#pclose:hover,#pback:hover{color:var(--gold)}
+#pbody{padding:14px 16px;overflow-y:auto;flex:1}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.meta .m{background:#15152e;border:1px solid #2a2a4a;border-radius:8px;padding:8px 10px}
+.meta .m .k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.meta .m .v{font-size:14px;color:var(--text);margin-top:2px}
+.connrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.connrow:hover{background:#23234a;border-color:#3a3a66}
+.connrow .refs{font-size:13px}
+.connrow .votes{font-size:11px;color:var(--muted);white-space:nowrap}
+.connrow .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+.sect{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 0 6px}
+.tag{display:inline-block;background:rgba(212,175,55,.12);color:var(--gold);border:1px solid rgba(212,175,55,.4);border-radius:20px;padding:2px 11px;font-size:11px;margin-bottom:10px}
+.bigref{font-size:17px;font-weight:600;line-height:1.4}
+.arrow{color:var(--gold);margin:0 6px}
+.expl{background:#15152e;border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:10px 12px;font-size:13px;color:#cfcce4;margin:12px 0}
+.vtext{background:#12122a;border:1px solid #2a2a4a;border-radius:8px;padding:10px 12px;margin:8px 0;font-size:13px}
+.vtext .vr{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.vtext .vt{font-style:italic;color:#d8d5ea}
+.vtext .woj{color:#e8736d}
+.vtext .mut{color:var(--muted);font-style:normal;font-size:12px}
+footer{display:flex;gap:16px;align-items:center;padding:7px 16px;background:var(--card);border-top:1px solid #2a2a4a;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px}
+.leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
+#hint{margin-left:auto}
+@media (max-width:700px){ header h1{font-size:14px} .stats{display:none} #hint{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>&#10022; Scripture Explorer</h1>
+  <span class="stats" id="stats"></span>
+  <div id="searchwrap">
+    <input id="search" placeholder="Search a book or verse… e.g. John 3:16" autocomplete="off">
+    <div id="suggest"></div>
+  </div>
+  <div class="ctrl">
+    <button class="btn fbtn active" data-f="all">All</button>
+    <button class="btn fbtn" data-f="cross">Cross-testament</button>
+    <button class="btn fbtn" data-f="ot">Within OT</button>
+    <button class="btn fbtn" data-f="nt">Within NT</button>
+    <label class="sl">Min votes <input type="range" id="minvotes" min="0" max="100" value="0"><span id="mvval">0</span></label>
+    <button class="btn" id="zin">+</button>
+    <button class="btn" id="zout">&minus;</button>
+    <button class="btn" id="reset">Reset</button>
+  </div>
+</header>
+<div id="stage">
+  <div id="loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#0d0d1a;z-index:50">
+    <div style="width:34px;height:34px;border:3px solid #2a2a4a;border-top-color:#d4af37;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <div style="color:#9a96b8;font-size:13px" id="loadmsg">Loading 344,799 connections…</div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  </div>
+  <div id="progress"></div>
+  <canvas id="base"></canvas>
+  <canvas id="overlay"></canvas>
+  <div id="tooltip"></div>
+  <aside id="panel">
+    <div class="phead">
+      <button id="pback" title="Back" style="display:none">&#8592;</button>
+      <h2 id="ptitle">Details</h2>
+      <button id="pclose" title="Close">&#10005;</button>
+    </div>
+    <div id="pbody"></div>
+  </aside>
+</div>
+<footer>
+  <span class="leg"><i style="background:var(--purple)"></i> Nearby books</span>
+  <span class="leg"><i style="background:var(--green)"></i> Medium span</span>
+  <span class="leg"><i style="background:var(--orange)"></i> Long span</span>
+  <span class="leg"><i style="background:var(--red)"></i> Full-Bible span</span>
+  <span>Data: OpenBible.info (CC-BY) · Text: WEB via bible.helloao.org</span>
+  <span id="hint">Scroll to zoom &middot; drag to pan &middot; tap a book or arc</span>
+</footer>
+<script>
+// Generated from OpenBible.info cross-references (CC-BY)
+const BOOKS=[{"osis":"Gen","name":"Genesis","chapters":50,"testament":"OT","year":-1400,"chapStart":0},{"osis":"Exod","name":"Exodus","chapters":40,"testament":"OT","year":-1400,"chapStart":50},{"osis":"Lev","name":"Leviticus","chapters":27,"testament":"OT","year":-1400,"chapStart":90},{"osis":"Num","name":"Numbers","chapters":36,"testament":"OT","year":-1400,"chapStart":117},{"osis":"Deut","name":"Deuteronomy","chapters":34,"testament":"OT","year":-1400,"chapStart":153},{"osis":"Josh","name":"Joshua","chapters":24,"testament":"OT","year":-1375,"chapStart":187},{"osis":"Judg","name":"Judges","chapters":21,"testament":"OT","year":-1050,"chapStart":211},{"osis":"Ruth","name":"Ruth","chapters":4,"testament":"OT","year":-1000,"chapStart":232},{"osis":"1Sam","name":"1 Samuel","chapters":31,"testament":"OT","year":-930,"chapStart":236},{"osis":"2Sam","name":"2 Samuel","chapters":24,"testament":"OT","year":-930,"chapStart":267},{"osis":"1Kgs","name":"1 Kings","chapters":22,"testament":"OT","year":-550,"chapStart":291},{"osis":"2Kgs","name":"2 Kings","chapters":25,"testament":"OT","year":-550,"chapStart":313},{"osis":"1Chr","name":"1 Chronicles","chapters":29,"testament":"OT","year":-430,"chapStart":338},{"osis":"2Chr","name":"2 Chronicles","chapters":36,"testament":"OT","year":-430,"chapStart":367},{"osis":"Ezra","name":"Ezra","chapters":10,"testament":"OT","year":-440,"chapStart":403},{"osis":"Neh","name":"Nehemiah","chapters":13,"testament":"OT","year":-430,"chapStart":413},{"osis":"Esth","name":"Esther","chapters":10,"testament":"OT","year":-460,"chapStart":426},{"osis":"Job","name":"Job","chapters":42,"testament":"OT","year":-1500,"chapStart":436},{"osis":"Ps","name":"Psalms","chapters":150,"testament":"OT","year":-1000,"chapStart":478},{"osis":"Prov","name":"Proverbs","chapters":31,"testament":"OT","year":-950,"chapStart":628},{"osis":"Eccl","name":"Ecclesiastes","chapters":12,"testament":"OT","year":-935,"chapStart":659},{"osis":"Song","name":"Song of Solomon","chapters":8,"testament":"OT","year":-950,"chapStart":671},{"osis":"Isa","name":"Isaiah","chapters":66,"testament":"OT","year":-700,"chapStart":679},{"osis":"Jer","name":"Jeremiah","chapters":52,"testament":"OT","year":-600,"chapStart":745},{"osis":"Lam","name":"Lamentations","chapters":5,"testament":"OT","year":-586,"chapStart":797},{"osis":"Ezek","name":"Ezekiel","chapters":48,"testament":"OT","year":-580,"chapStart":802},{"osis":"Dan","name":"Daniel","chapters":12,"testament":"OT","year":-530,"chapStart":850},{"osis":"Hos","name":"Hosea","chapters":14,"testament":"OT","year":-750,"chapStart":862},{"osis":"Joel","name":"Joel","chapters":3,"testament":"OT","year":-835,"chapStart":876},{"osis":"Amos","name":"Amos","chapters":9,"testament":"OT","year":-760,"chapStart":879},{"osis":"Obad","name":"Obadiah","chapters":1,"testament":"OT","year":-586,"chapStart":888},{"osis":"Jonah","name":"Jonah","chapters":4,"testament":"OT","year":-760,"chapStart":889},{"osis":"Mic","name":"Micah","chapters":7,"testament":"OT","year":-700,"chapStart":893},{"osis":"Nah","name":"Nahum","chapters":3,"testament":"OT","year":-650,"chapStart":900},{"osis":"Hab","name":"Habakkuk","chapters":3,"testament":"OT","year":-607,"chapStart":903},{"osis":"Zeph","name":"Zephaniah","chapters":3,"testament":"OT","year":-630,"chapStart":906},{"osis":"Hag","name":"Haggai","chapters":2,"testament":"OT","year":-520,"chapStart":909},{"osis":"Zech","name":"Zechariah","chapters":14,"testament":"OT","year":-518,"chapStart":911},{"osis":"Mal","name":"Malachi","chapters":4,"testament":"OT","year":-430,"chapStart":925},{"osis":"Matt","name":"Matthew","chapters":28,"testament":"NT","year":60,"chapStart":929},{"osis":"Mark","name":"Mark","chapters":16,"testament":"NT","year":55,"chapStart":957},{"osis":"Luke","name":"Luke","chapters":24,"testament":"NT","year":60,"chapStart":973},{"osis":"John","name":"John","chapters":21,"testament":"NT","year":90,"chapStart":997},{"osis":"Acts","name":"Acts","chapters":28,"testament":"NT","year":62,"chapStart":1018},{"osis":"Rom","name":"Romans","chapters":16,"testament":"NT","year":57,"chapStart":1046},{"osis":"1Cor","name":"1 Corinthians","chapters":16,"testament":"NT","year":55,"chapStart":1062},{"osis":"2Cor","name":"2 Corinthians","chapters":13,"testament":"NT","year":56,"chapStart":1078},{"osis":"Gal","name":"Galatians","chapters":6,"testament":"NT","year":49,"chapStart":1091},{"osis":"Eph","name":"Ephesians","chapters":6,"testament":"NT","year":61,"chapStart":1097},{"osis":"Phil","name":"Philippians","chapters":4,"testament":"NT","year":61,"chapStart":1103},{"osis":"Col","name":"Colossians","chapters":4,"testament":"NT","year":61,"chapStart":1107},{"osis":"1Thess","name":"1 Thessalonians","chapters":5,"testament":"NT","year":51,"chapStart":1111},{"osis":"2Thess","name":"2 Thessalonians","chapters":3,"testament":"NT","year":52,"chapStart":1116},{"osis":"1Tim","name":"1 Timothy","chapters":6,"testament":"NT","year":63,"chapStart":1119},{"osis":"2Tim","name":"2 Timothy","chapters":4,"testament":"NT","year":67,"chapStart":1125},{"osis":"Titus","name":"Titus","chapters":3,"testament":"NT","year":65,"chapStart":1129},{"osis":"Phlm","name":"Philemon","chapters":1,"testament":"NT","year":61,"chapStart":1132},{"osis":"Heb","name":"Hebrews","chapters":13,"testament":"NT","year":67,"chapStart":1133},{"osis":"Jas","name":"James","chapters":5,"testament":"NT","year":48,"chapStart":1146},{"osis":"1Pet","name":"1 Peter","chapters":5,"testament":"NT","year":64,"chapStart":1151},{"osis":"2Pet","name":"2 Peter","chapters":3,"testament":"NT","year":66,"chapStart":1156},{"osis":"1John","name":"1 John","chapters":5,"testament":"NT","year":90,"chapStart":1159},{"osis":"2John","name":"2 John","chapters":1,"testament":"NT","year":90,"chapStart":1164},{"osis":"3John","name":"3 John","chapters":1,"testament":"NT","year":90,"chapStart":1165},{"osis":"Jude","name":"Jude","chapters":1,"testament":"NT","year":68,"chapStart":1166},{"osis":"Rev","name":"Revelation","chapters":22,"testament":"NT","year":95,"chapStart":1167}];
+const VPC=[31,25,24,26,32,22,24,22,29,32,32,20,18,24,21,16,27,33,38,18,34,24,20,67,34,35,46,22,35,43,55,32,20,31,29,43,36,30,23,23,57,38,34,34,28,34,31,22,33,26,22,25,22,31,23,30,25,32,35,29,10,51,22,31,27,36,16,27,24,26,34,31,33,18,40,37,21,43,46,38,18,35,23,35,35,38,29,31,43,38,17,16,17,35,19,30,38,36,24,20,47,8,59,57,33,34,16,30,37,27,24,33,44,23,55,46,34,54,34,51,49,31,27,89,26,23,36,35,16,33,45,41,50,13,32,22,29,35,41,30,25,18,65,23,31,40,16,54,42,56,29,34,13,46,37,29,49,33,25,26,20,29,22,32,32,18,29,23,22,20,22,21,20,23,30,25,22,19,19,26,68,29,20,30,52,29,12,18,24,17,24,15,27,26,35,27,43,23,24,33,15,63,10,18,28,51,9,45,34,16,33,36,22,31,24,31,39,25,35,57,18,40,15,25,20,20,31,13,31,30,48,25,22,23,18,22,28,36,21,22,12,21,17,22,27,27,15,25,23,52,35,23,58,30,24,42,15,23,29,22,44,25,12,24,11,31,13,27,32,39,12,25,23,29,18,13,19,27,31,39,33,37,23,29,33,43,26,22,51,39,25,53,46,28,34,18,38,51,66,28,29,43,33,34,31,34,34,24,46,21,43,29,53,18,25,27,44,27,33,20,29,37,35,21,21,25,29,38,20,41,37,37,21,26,20,37,20,30,54,55,22,43,26,81,40,40,43,14,41,40,14,17,29,43,27,17,19,8,30,19,32,31,30,32,34,21,30,17,18,17,22,14,42,22,18,31,19,23,16,22,15,19,14,19,34,11,37,20,12,21,27,28,23,9,27,36,27,21,33,25,33,27,23,11,70,13,24,17,22,28,36,15,44,11,20,32,23,19,19,73,18,38,39,36,47,31,22,23,15,16,14,14,10,17,32,3,22,13,26,21,27,30,21,22,34,22,20,25,28,22,35,22,16,21,29,29,34,30,17,25,6,14,23,28,25,31,40,22,33,37,16,33,24,41,30,24,34,17,6,12,8,8,12,10,17,9,20,18,7,8,6,7,5,11,15,50,14,9,13,31,6,10,22,12,14,9,11,12,24,11,22,22,28,12,40,22,13,17,13,11,5,26,17,11,9,14,20,23,19,9,6,7,23,13,11,11,17,12,8,12,11,10,13,20,7,35,36,5,24,20,28,23,10,12,20,72,13,19,16,8,18,12,13,17,7,18,52,17,16,15,5,23,11,13,12,9,9,5,8,28,22,35,45,48,43,13,31,7,10,10,9,8,18,19,2,29,176,7,8,9,4,8,5,6,5,6,8,8,3,18,3,3,21,26,9,8,24,13,10,7,12,15,21,10,20,14,9,6,33,22,35,27,23,35,27,36,18,32,31,28,25,35,33,33,28,24,29,30,31,29,35,34,28,28,27,28,27,33,31,18,26,22,16,20,12,29,17,18,20,10,14,17,17,11,16,16,13,13,14,31,22,26,6,30,13,25,22,21,34,16,6,22,32,9,14,14,7,25,6,17,25,18,23,12,21,13,29,24,33,9,20,24,17,10,22,38,22,8,31,29,25,28,28,25,13,15,22,26,11,23,15,12,17,13,12,21,14,21,22,11,12,19,12,25,24,19,37,25,31,31,30,34,22,26,25,23,17,27,22,21,21,27,23,15,18,14,30,40,10,38,24,22,17,32,24,40,44,26,22,19,32,21,28,18,16,18,22,13,30,5,28,7,47,39,46,64,34,22,22,66,22,22,28,10,27,17,17,14,27,18,11,22,25,28,23,23,8,63,24,32,14,49,32,31,49,27,17,21,36,26,21,26,18,32,33,31,15,38,28,23,29,49,26,20,27,31,25,24,22,35,21,49,30,37,31,28,28,27,27,21,45,13,11,23,5,19,15,11,16,14,17,15,12,14,16,9,20,32,21,15,16,15,13,27,14,17,14,15,21,17,10,10,11,16,13,12,13,15,16,20,15,13,19,17,20,19,18,15,20,15,23,21,13,10,14,11,15,14,23,17,12,17,14,9,21,14,17,18,6,25,23,17,25,48,34,29,34,38,42,30,50,58,36,39,28,27,35,30,34,46,46,39,51,46,75,66,20,45,28,35,41,43,56,37,38,50,52,33,44,37,72,47,20,80,52,38,44,39,49,50,56,62,42,54,59,35,35,32,31,37,43,48,47,38,71,56,53,51,25,36,54,47,71,53,59,41,42,57,50,38,31,27,33,26,40,42,31,25,26,47,26,37,42,15,60,40,43,48,30,25,52,28,41,40,34,28,41,38,40,30,35,27,27,32,44,31,32,29,31,25,21,23,25,39,33,21,36,21,14,23,33,27,31,16,23,21,13,20,40,13,27,33,34,31,13,40,58,24,24,17,18,18,21,18,16,24,15,18,33,21,14,24,21,29,31,26,18,23,22,21,32,33,24,30,30,21,23,29,23,25,18,10,20,13,18,28,12,17,18,20,15,16,16,25,21,18,26,17,22,16,15,15,25,14,18,19,16,14,20,28,13,28,39,40,29,25,27,26,18,17,20,25,25,22,19,14,21,22,18,10,29,24,21,21,13,15,25,20,29,22,11,14,17,17,13,21,11,19,17,18,20,8,21,18,24,21,15,27,21];
+const CONN_COUNT=344799;
+</script>
+<script>
+(async () => {
+  try {
+    const r = await fetch('data.bin');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    window.CONN_BYTES = new Uint8Array(await r.arrayBuffer());
+  } catch (e) {
+    const m = document.getElementById('loadmsg');
+    if (m) m.textContent = 'Could not load connection data (' + e.message + '). Refresh to retry.';
+    return;
+  }
+'use strict';
+/* ============ DECODE DATA ============ */
+const N = CONN_COUNT;
+const bytes = (typeof CONN_BYTES !== 'undefined') ? CONN_BYTES : Uint8Array.from(atob(CONN_B64), c => c.charCodeAt(0));
+const dv = new DataView(bytes.buffer);
+const fChap = new Uint16Array(N), fVerse = new Uint8Array(N),
+      tChap = new Uint16Array(N), tVerse = new Uint8Array(N),
+      votes = new Int16Array(N);
+for (let i = 0, o = 0; i < N; i++, o += 8) {
+  fChap[i] = dv.getUint16(o, true); fVerse[i] = dv.getUint8(o + 2);
+  tChap[i] = dv.getUint16(o + 3, true); tVerse[i] = dv.getUint8(o + 5);
+  votes[i] = dv.getInt16(o + 6, true);
+}
+/* ============ LAYOUT TABLES ============ */
+const NB = BOOKS.length, NC = VPC.length;
+const chapBook = new Uint8Array(NC);
+BOOKS.forEach((b, bi) => { for (let c = 0; c < b.chapters; c++) chapBook[b.chapStart + c] = bi; });
+const chapVStart = new Float64Array(NC);
+let totV = 0;
+for (let i = 0; i < NC; i++) { chapVStart[i] = totV; totV += VPC[i]; }
+const bookVStart = BOOKS.map(b => chapVStart[b.chapStart] / totV);
+const bookVEnd = BOOKS.map((b, i) => i + 1 < NB ? chapVStart[BOOKS[i + 1].chapStart] / totV : 1);
+const posF = new Float32Array(N), posT = new Float32Array(N),
+      bkF = new Uint8Array(N), bkT = new Uint8Array(N), cat = new Uint8Array(N);
+const bookCount = new Uint32Array(NB);
+for (let i = 0; i < N; i++) {
+  posF[i] = (chapVStart[fChap[i]] + fVerse[i] - 0.5) / totV;
+  posT[i] = (chapVStart[tChap[i]] + tVerse[i] - 0.5) / totV;
+  bkF[i] = chapBook[fChap[i]]; bkT[i] = chapBook[tChap[i]];
+  const d = Math.abs(fChap[i] - tChap[i]) / (NC - 1);
+  cat[i] = d < 0.08 ? 0 : d < 0.3 ? 1 : d < 0.6 ? 2 : 3;
+  bookCount[bkF[i]]++; if (bkT[i] !== bkF[i]) bookCount[bkT[i]]++;
+}
+// per-book connection index (book -> indices of connections touching it)
+const bkOff = new Uint32Array(NB + 1);
+{ const tmp = new Uint32Array(NB);
+  for (let i = 0; i < N; i++) { tmp[bkF[i]]++; if (bkT[i] !== bkF[i]) tmp[bkT[i]]++; }
+  for (let b = 0; b < NB; b++) bkOff[b + 1] = bkOff[b] + tmp[b]; }
+const bkIdx = new Uint32Array(bkOff[NB]);
+{ const cur = bkOff.slice(0, NB);
+  for (let i = 0; i < N; i++) { bkIdx[cur[bkF[i]]++] = i; if (bkT[i] !== bkF[i]) bkIdx[cur[bkT[i]]++] = i; } }
+// render buckets: 4 colors × 6 alpha levels; arcs pre-sorted by bucket so the
+// renderer batches hundreds of arcs per stroke call instead of one stroke each
+const ALV = 6;
+const ALPHAS = Array.from({ length: ALV }, (_, l) => 0.018 + l / (ALV - 1) * 0.10);
+const bucketOf = new Uint8Array(N);
+for (let i = 0; i < N; i++) {
+  const v = votes[i] <= 0 ? 0 : Math.min(votes[i], 80);
+  bucketOf[i] = cat[i] * ALV + Math.min(ALV - 1, Math.round(v / 80 * (ALV - 1)));
+}
+const NBK = 4 * ALV;
+const bOff = new Uint32Array(NBK + 1);
+{ const tmp = new Uint32Array(NBK);
+  for (let i = 0; i < N; i++) tmp[bucketOf[i]]++;
+  for (let b = 0; b < NBK; b++) bOff[b + 1] = bOff[b] + tmp[b]; }
+const order = new Uint32Array(N);
+{ const cur = bOff.slice(0, NBK);
+  for (let i = 0; i < N; i++) order[cur[bucketOf[i]]++] = i; }
+// top arcs globally by votes (for hit-testing with nothing selected)
+const topGlobal = Array.from({length: N}, (_, i) => i).sort((a, b) => votes[b] - votes[a]).slice(0, 6000);
+const OT_END = 38; // index of Malachi
+const COLORS = ['#8b5cf6', '#34d399', '#fb923c', '#f87171'];
+const fmtYear = y => y < 0 ? `c. ${-y} BC` : `c. AD ${y}`;
+const refOf = (ch, v) => { const b = BOOKS[chapBook[ch]]; return `${b.name} ${ch - b.chapStart + 1}:${v}`; };
+const osisOf = (ch, v) => { const b = BOOKS[chapBook[ch]]; return `${b.osis}.${ch - b.chapStart + 1}.${v}`; };
+document.getElementById('stats').textContent =
+  `${N.toLocaleString()} connections · 66 books · ${NC.toLocaleString()} chapters`;
+
+/* ============ CURATED EXPLANATIONS ============ */
+const TYPES = { P: 'Prophecy → Fulfillment', Q: 'Direct quotation', T: 'Typology / foreshadowing', A: 'Allusion / echo', M: 'Thematic parallel' };
+const CUR = {
+ 'Gen.1.1|John.1.1': ['A', 'John deliberately opens with the very words of Genesis — "In the beginning" — presenting Christ as the Word who was present and active at creation itself.'],
+ 'Gen.1.3|2Cor.4.6': ['A', 'Paul compares God\'s first creative command, "Let there be light," to the light of the knowledge of God\'s glory shining in believers\' hearts through Christ.'],
+ 'Gen.3.15|Rom.16.20': ['P', 'The "protoevangelium" — the first gospel promise that the woman\'s offspring would crush the serpent\'s head — echoed in Paul\'s assurance that God will soon crush Satan underfoot.'],
+ 'Gen.12.3|Gal.3.8': ['Q', 'Paul calls God\'s promise to Abraham — "in you all nations will be blessed" — the gospel preached beforehand, fulfilled as Gentiles come to faith.'],
+ 'Gen.22.18|Acts.3.25': ['Q', 'Peter cites the promise to Abraham\'s offspring as fulfilled in Jesus, through whom all families of the earth are blessed.'],
+ 'Gen.14.18|Heb.7.1': ['T', 'Melchizedek, king of Salem and priest of God Most High, prefigures Christ\'s eternal priesthood — a priest not by ancestry but by divine appointment.'],
+ 'Gen.15.6|Rom.4.3': ['Q', 'Paul quotes "Abraham believed God, and it was credited to him as righteousness" as the foundational text for justification by faith.'],
+ 'Gen.2.24|Eph.5.31': ['Q', 'The "one flesh" of marriage in Eden is quoted by Paul and revealed as a profound mystery pointing to Christ and the church.'],
+ 'Exod.12.46|John.19.36': ['P', 'The Passover lamb\'s bones were not to be broken — fulfilled when the soldiers, finding Jesus already dead, did not break his legs.'],
+ 'Exod.3.6|Matt.22.32': ['Q', 'Jesus quotes God\'s self-identification at the burning bush — "the God of Abraham, Isaac, and Jacob" — to prove the resurrection: He is God of the living.'],
+ 'Exod.16.4|John.6.31': ['T', 'The manna from heaven in the wilderness foreshadows Jesus, the true bread from heaven who gives life to the world.'],
+ 'Lev.19.18|Matt.22.39': ['Q', '"Love your neighbor as yourself" — quoted by Jesus as the second greatest commandment, on which all the Law and Prophets hang.'],
+ 'Num.21.9|John.3.14': ['T', 'As Moses lifted up the bronze serpent so the dying could look and live, so the Son of Man must be lifted up — Jesus\' own picture of the cross.'],
+ 'Deut.6.5|Matt.22.37': ['Q', 'The Shema\'s command to love God with all your heart, soul, and strength — quoted by Jesus as the first and greatest commandment.'],
+ 'Deut.8.3|Matt.4.4': ['Q', '"Man shall not live by bread alone" — Jesus answers the tempter in the wilderness with Israel\'s wilderness lesson.'],
+ 'Deut.18.15|Acts.3.22': ['P', 'Moses promised God would raise up a prophet like him; Peter declares Jesus is that Prophet whom all must hear.'],
+ 'Ps.2.7|Heb.1.5': ['Q', '"You are my Son; today I have begotten you" — the royal coronation psalm applied to Christ\'s exaltation above the angels.'],
+ 'Ps.8.2|Matt.21.16': ['Q', 'Jesus quotes "out of the mouths of infants you have prepared praise" when children hail him in the temple.'],
+ 'Ps.16.10|Acts.2.27': ['P', 'David\'s confidence that God would not abandon his Holy One to decay — preached by Peter at Pentecost as prophecy of the resurrection.'],
+ 'Ps.22.1|Matt.27.46': ['Q', '"My God, my God, why have you forsaken me?" — Jesus prays the opening of Psalm 22 from the cross, claiming the whole psalm\'s arc of suffering and vindication.'],
+ 'Ps.22.18|John.19.24': ['P', '"They divide my garments among them and cast lots for my clothing" — fulfilled to the letter by the soldiers at the crucifixion.'],
+ 'Ps.41.9|John.13.18': ['P', 'The close friend who shared David\'s bread and lifted his heel against him — fulfilled in Judas\' betrayal at the last supper.'],
+ 'Ps.69.21|John.19.29': ['P', '"For my thirst they gave me sour wine" — echoed when Jesus is offered vinegar on the cross.'],
+ 'Ps.110.1|Matt.22.44': ['Q', '"The LORD said to my Lord, sit at my right hand" — the most-quoted Old Testament verse in the New Testament; Jesus uses it to show Messiah is David\'s Lord, not merely his son.'],
+ 'Ps.118.22|Matt.21.42': ['Q', '"The stone the builders rejected has become the cornerstone" — Jesus applies it to his own rejection by Israel\'s leaders.'],
+ 'Ps.118.22|Acts.4.11': ['Q', 'Peter tells the Sanhedrin that Jesus is the stone they, the builders, rejected — now the cornerstone of salvation.'],
+ 'Isa.6.9|Matt.13.14': ['Q', 'Isaiah\'s commission — "hearing they will not understand" — quoted by Jesus to explain why he teaches in parables.'],
+ 'Isa.7.14|Matt.1.23': ['P', '"The virgin shall conceive and bear a son, and they shall call his name Immanuel" — Matthew\'s first fulfillment citation, announcing God with us.'],
+ 'Isa.9.1|Matt.4.15': ['P', 'Light dawning on Galilee of the Gentiles — fulfilled as Jesus begins his ministry in Capernaum.'],
+ 'Isa.40.3|Matt.3.3': ['P', '"A voice crying in the wilderness: prepare the way of the Lord" — identified by all four Gospels with John the Baptist.'],
+ 'Isa.53.4|Matt.8.17': ['P', '"He took our illnesses and bore our diseases" — Matthew sees the Servant\'s burden-bearing in Jesus\' healing ministry.'],
+ 'Isa.53.5|1Pet.2.24': ['P', '"By his wounds you have been healed" — Peter applies the Suffering Servant song directly to Christ bearing our sins on the tree.'],
+ 'Isa.53.7|Acts.8.32': ['P', 'The Servant led like a lamb to slaughter — the very passage the Ethiopian official was reading when Philip "told him the good news about Jesus."'],
+ 'Isa.61.1|Luke.4.18': ['Q', '"The Spirit of the Lord is upon me…" — Jesus reads this in the Nazareth synagogue and declares, "Today this scripture is fulfilled in your hearing."'],
+ 'Isa.28.16|1Pet.2.6': ['Q', 'The precious cornerstone laid in Zion — believers who trust in him will never be put to shame.'],
+ 'Jer.31.31|Heb.8.8': ['P', 'Jeremiah\'s promised new covenant — quoted at length in Hebrews as established by Christ, making the first covenant obsolete.'],
+ 'Ezek.36.26|2Cor.3.3': ['M', 'The promised heart of flesh replacing the heart of stone — Paul sees the Spirit writing on human hearts, not stone tablets.'],
+ 'Dan.7.13|Matt.24.30': ['A', 'Daniel\'s vision of one like a Son of Man coming with the clouds — Jesus\' favorite self-designation, claimed before the high priest and for his return.'],
+ 'Hos.11.1|Matt.2.15': ['T', '"Out of Egypt I called my son" — Israel\'s exodus story re-lived by the true Son when the holy family returns from Egypt.'],
+ 'Joel.2.28|Acts.2.17': ['P', '"I will pour out my Spirit on all flesh" — Peter\'s Pentecost text: "this is what was spoken by the prophet Joel."'],
+ 'Jonah.1.17|Matt.12.40': ['T', 'Three days and nights in the fish — Jesus names the "sign of Jonah" as the pattern of his burial and resurrection.'],
+ 'Mic.5.2|Matt.2.6': ['P', 'Bethlehem, little among Judah\'s clans, will bring forth Israel\'s ruler — the verse the scribes quote to Herod about Messiah\'s birthplace.'],
+ 'Zech.9.9|Matt.21.5': ['P', '"Behold, your king comes to you, humble and mounted on a donkey" — fulfilled on Palm Sunday as Jesus enters Jerusalem.'],
+ 'Zech.12.10|John.19.37': ['P', '"They will look on him whom they have pierced" — cited by John at the spear-thrust on the cross.'],
+ 'Zech.11.12|Matt.26.15': ['P', 'Thirty pieces of silver, the shepherd\'s wage — the price Judas accepts to betray Jesus.'],
+ 'Mal.3.1|Mark.1.2': ['P', '"Behold, I send my messenger to prepare the way" — Mark opens his Gospel with this promise, fulfilled in John the Baptist.'],
+ 'Mal.4.5|Matt.11.14': ['P', 'Elijah who comes before the great day of the LORD — Jesus says John the Baptist is the Elijah who was to come.'],
+ 'Hab.2.4|Rom.1.17': ['Q', '"The righteous shall live by faith" — Habakkuk\'s watchword becomes Paul\'s thesis statement for the gospel, and later the spark of the Reformation.'],
+};
+function explain(i) {
+  const k1 = osisOf(fChap[i], fVerse[i]) + '|' + osisOf(tChap[i], tVerse[i]);
+  const k2 = osisOf(tChap[i], tVerse[i]) + '|' + osisOf(fChap[i], fVerse[i]);
+  const c = CUR[k1] || CUR[k2];
+  if (c) return { type: TYPES[c[0]], text: c[1], curated: true };
+  const bf = bkF[i], bt = bkT[i], v = votes[i];
+  const conf = v >= 50 ? 'a strong, widely recognized link' : v >= 10 ? 'a well-supported link' : 'a suggested link';
+  let type, text;
+  if (bf === bt) { type = 'Internal parallel';
+    text = `Both passages sit within ${BOOKS[bf].name}, where repeated phrases, refrains, and narrative echoes bind the book together. Readers marked this as ${conf} (${v} votes).`; }
+  else if ((bf <= OT_END) !== (bt <= OT_END)) { type = 'Cross-testament connection';
+    const ot = bf <= OT_END ? refOf(fChap[i], fVerse[i]) : refOf(tChap[i], tVerse[i]);
+    const nt = bf <= OT_END ? refOf(tChap[i], tVerse[i]) : refOf(fChap[i], fVerse[i]);
+    text = `${nt} draws on the language, imagery, or promise of ${ot} — the kind of quotation, fulfillment, or allusion that stitches the two testaments together. Readers marked this as ${conf} (${v} votes).`; }
+  else { type = 'Thematic parallel';
+    text = `These passages share vocabulary, themes, or storyline within the ${bf <= OT_END ? 'Old' : 'New'} Testament. Readers marked this as ${conf} (${v} votes).`; }
+  return { type, text, curated: false };
+}
+
+/* ============ CANVAS / VIEW STATE ============ */
+const stage = document.getElementById('stage');
+const baseC = document.getElementById('base'), overC = document.getElementById('overlay');
+const bctx = baseC.getContext('2d'), octx = overC.getContext('2d');
+const strip = document.createElement('canvas'), sctx = strip.getContext('2d');
+const progress = document.getElementById('progress');
+let W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
+const ADPR = 1; // arcs are low-alpha haze — 1x resolution is indistinguishable and 4x cheaper
+let zoom = 1, panX = 0;            // x_px = frac * W * zoom - panX
+let minVotes = 0, filter = 'all';
+let hoverBook = -1, selBook = -1, selConn = -1, selChap = -1, selVerse = -1;
+let renderJob = 0;
+// cached arc strip: world-space slab up to 3 viewports wide; panning inside it = pure blit
+let stripX0 = 0, stripW = 0, stripZoom = 0, stripKey = '';
+const barH = 24;
+const barY = () => H - 58;
+const topPad = 14;
+function resize() {
+  W = stage.clientWidth; H = stage.clientHeight;
+  for (const c of [baseC, overC]) { c.width = W * DPR; c.height = H * DPR; }
+  baseC.style.width = overC.style.width = W + 'px';
+  baseC.style.height = overC.style.height = H + 'px';
+  bctx.setTransform(DPR, 0, 0, DPR, 0, 0); octx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  clampPan(); renderBase(); drawOverlay();
+}
+const xOf = f => f * W * zoom - panX;
+function clampPan() { panX = Math.max(0, Math.min(panX, W * zoom - W)); }
+function passes(i) {
+  if (votes[i] < minVotes) return false;
+  if (filter === 'all') return true;
+  const a = bkF[i] <= OT_END, b = bkT[i] <= OT_END;
+  if (filter === 'cross') return a !== b;
+  if (filter === 'ot') return a && b;
+  return !a && !b;
+}
+function arcPath(ctx, x1, x2) {
+  const by = barY();
+  const h = Math.min(by - topPad, Math.max(6, Math.abs(x2 - x1) * 0.42));
+  ctx.moveTo(x1, by);
+  ctx.quadraticCurveTo((x1 + x2) / 2, by - 2 * h, x2, by);
+}
+const viewKey = () => filter + '|' + minVotes;
+/* progressive strip render — arcs batched ~256 per stroke, grouped by color/alpha bucket */
+function renderBase() {
+  const job = ++renderJob;
+  stripZoom = zoom; stripKey = viewKey();
+  stripW = Math.min(W * zoom, 3 * W);
+  stripX0 = Math.max(0, Math.min(panX - (stripW - W) / 2, W * zoom - stripW));
+  strip.width = Math.max(1, Math.round(stripW * ADPR));
+  strip.height = Math.max(1, Math.round(H * ADPR));
+  sctx.setTransform(ADPR, 0, 0, ADPR, 0, 0);
+  sctx.clearRect(0, 0, stripW, H);
+  sctx.lineWidth = 0.7;
+  const boost = Math.min(3.5, 1 + (zoom - 1) * 0.25);
+  const WZ = W * zoom, by = barY(), maxH = by - topPad, sx0 = stripX0, sw = stripW;
+  let p = 0;
+  const CHUNK = 70000;
+  function step() {
+    if (job !== renderJob) return;
+    const end = Math.min(N, p + CHUNK);
+    let curB = -1, batch = 0, open = false;
+    while (p < end) {
+      const i = order[p++];
+      const b = bucketOf[i];
+      if (b !== curB) {
+        if (open) sctx.stroke();
+        curB = b; batch = 0;
+        sctx.strokeStyle = COLORS[(b / ALV) | 0];
+        sctx.globalAlpha = Math.min(0.85, ALPHAS[b % ALV] * boost);
+        sctx.beginPath(); open = true;
+      }
+      if (!passes(i)) continue;
+      const x1 = posF[i] * WZ - sx0, x2 = posT[i] * WZ - sx0;
+      if ((x1 < -8 && x2 < -8) || (x1 > sw + 8 && x2 > sw + 8)) continue;
+      const h = Math.min(maxH, Math.max(6, Math.abs(x2 - x1) * 0.42));
+      sctx.moveTo(x1, by);
+      sctx.quadraticCurveTo((x1 + x2) / 2, by - 2 * h, x2, by);
+      if (++batch >= 256) { sctx.stroke(); sctx.beginPath(); batch = 0; } // keep alpha build-up between batches
+    }
+    if (open) sctx.stroke();
+    sctx.globalAlpha = 1;
+    progress.style.width = (p / N * 100) + '%';
+    blit();
+    if (p < N) requestAnimationFrame(step);
+    else setTimeout(() => { if (job === renderJob) progress.style.width = '0%'; }, 250);
+  }
+  requestAnimationFrame(step);
+}
+function blit() {
+  bctx.clearRect(0, 0, W, H);
+  if (stripZoom === zoom) {
+    bctx.drawImage(strip, stripX0 - panX, 0, stripW, H);
+  } else { // zoom changed: scale the stale strip as an instant preview while re-render runs
+    const s = zoom / stripZoom;
+    bctx.drawImage(strip, stripX0 * s - panX, 0, stripW * s, H);
+  }
+  drawBar(bctx);
+}
+/* coalesced view updates: pan = blit only; re-render strip only when leaving it or zoom/filter changed */
+let viewRaf = 0, stripTimer = 0;
+function scheduleView() {
+  if (!viewRaf) viewRaf = requestAnimationFrame(() => { viewRaf = 0; drawOverlay(); });
+  if (zoom !== stripZoom || viewKey() !== stripKey || panX < stripX0 || panX + W > stripX0 + stripW) {
+    clearTimeout(stripTimer); stripTimer = setTimeout(renderBase, 120);
+  }
+}
+function drawBar(ctx) {
+  const by = barY();
+  ctx.save();
+  ctx.fillStyle = '#0d0d1a'; ctx.fillRect(0, by, W, H - by);
+  for (let b = 0; b < NB; b++) {
+    const x1 = xOf(bookVStart[b]), x2 = xOf(bookVEnd[b]);
+    if (x2 < 0 || x1 > W) continue;
+    const w = x2 - x1;
+    const sel = b === selBook, hov = b === hoverBook;
+    ctx.fillStyle = sel ? '#d4af37' : hov ? '#8a6f1f' : (b <= OT_END ? (b % 2 ? '#2b2b52' : '#252547') : (b % 2 ? '#3a3050' : '#332a47'));
+    ctx.fillRect(x1, by, Math.max(w - 0.6, 0.4), barH);
+    if (w > 13) {
+      ctx.save();
+      ctx.translate(x1 + w / 2 + 3, by + barH + 6);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = sel ? '#d4af37' : '#9a96b8';
+      ctx.font = (sel || hov ? '600 ' : '') + '10px -apple-system,sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(w > 46 ? BOOKS[b].name : BOOKS[b].osis, 0, 0);
+      ctx.restore();
+      if (w > 90) {
+        ctx.fillStyle = '#6a668a'; ctx.font = '9px -apple-system,sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(fmtYear(BOOKS[b].year), x1 + 3, by - 6);
+      }
+    }
+  }
+  // testament divider
+  const dx = xOf(bookVStart[OT_END + 1]);
+  if (dx > -2 && dx < W + 2) {
+    ctx.strokeStyle = 'rgba(212,175,55,.5)'; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(dx, topPad); ctx.lineTo(dx, by + barH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(212,175,55,.65)'; ctx.font = '600 10px -apple-system,sans-serif';
+    ctx.textAlign = 'right'; ctx.fillText('OLD TESTAMENT', dx - 8, topPad + 8);
+    ctx.textAlign = 'left'; ctx.fillText('NEW TESTAMENT', dx + 8, topPad + 8);
+  }
+  ctx.restore();
+}
+/* highlight overlay */
+function drawOverlay() {
+  octx.clearRect(0, 0, W, H);
+  if (selBook >= 0 || hoverBook >= 0) {
+    const b = selBook >= 0 ? selBook : hoverBook;
+    octx.lineWidth = 0.9;
+    octx.strokeStyle = '#d4af37';
+    for (let lv = 0; lv < ALV; lv++) {   // batched: 6 alpha groups, ~256 arcs per stroke
+      octx.globalAlpha = Math.min(0.9, 0.10 + lv / (ALV - 1) * 0.5);
+      octx.beginPath();
+      let n = 0;
+      for (let k = bkOff[b]; k < bkOff[b + 1]; k++) {
+        const i = bkIdx[k];
+        if (bucketOf[i] % ALV !== lv || !passes(i)) continue;
+        if (selChap >= 0 && !connTouches(i, selChap, selVerse)) continue;
+        const x1 = xOf(posF[i]), x2 = xOf(posT[i]);
+        if ((x1 < -8 && x2 < -8) || (x1 > W + 8 && x2 > W + 8)) continue;
+        arcPath(octx, x1, x2);
+        if (++n >= 256) { octx.stroke(); octx.beginPath(); n = 0; }
+      }
+      octx.stroke();
+    }
+    octx.globalAlpha = 1;
+  }
+  if (selConn >= 0) {
+    const x1 = xOf(posF[selConn]), x2 = xOf(posT[selConn]);
+    octx.save();
+    octx.shadowColor = '#d4af37'; octx.shadowBlur = 12;
+    octx.strokeStyle = '#ffd95e'; octx.lineWidth = 2.4; octx.globalAlpha = 1;
+    octx.beginPath(); arcPath(octx, x1, x2); octx.stroke();
+    octx.restore();
+    for (const x of [x1, x2]) {
+      octx.beginPath(); octx.arc(x, barY(), 4.5, 0, 7);
+      octx.fillStyle = '#ffd95e'; octx.fill();
+    }
+  }
+  blit();
+}
+function connTouches(i, chap, verse) {
+  const f = fChap[i] === chap && (verse < 0 || fVerse[i] === verse);
+  const t = tChap[i] === chap && (verse < 0 || tVerse[i] === verse);
+  return f || t;
+}
+/* ============ HIT TESTING ============ */
+function bookAtX(x) {
+  for (let b = 0; b < NB; b++)
+    if (x >= xOf(bookVStart[b]) && x < xOf(bookVEnd[b])) return b;
+  return -1;
+}
+function distToArc(px, py, x1, x2) {
+  const by = barY();
+  const h = Math.min(by - topPad, Math.max(6, Math.abs(x2 - x1) * 0.42));
+  const cy = by - 2 * h;
+  let best = 1e9;
+  for (let s = 0; s <= 24; s++) {
+    const t = s / 24, mt = 1 - t;
+    const x = mt * mt * x1 + 2 * mt * t * (x1 + x2) / 2 + t * t * x2;
+    const y = mt * mt * by + 2 * mt * t * cy + t * t * by;
+    const d = (px - x) * (px - x) + (py - y) * (py - y);
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
+}
+function hitArc(px, py) {
+  let cand;
+  if (selBook >= 0) {
+    cand = [];
+    for (let k = bkOff[selBook]; k < bkOff[selBook + 1] && cand.length < 4000; k++) {
+      const i = bkIdx[k];
+      if (passes(i) && (selChap < 0 || connTouches(i, selChap, selVerse))) cand.push(i);
+    }
+    cand.sort((a, b) => votes[b] - votes[a]); cand = cand.slice(0, 2500);
+  } else cand = topGlobal;
+  let best = -1, bd = 7;
+  for (const i of cand) {
+    if (!passes(i)) continue;
+    const x1 = xOf(posF[i]), x2 = xOf(posT[i]);
+    if ((x1 < -8 && x2 < -8) || (x1 > W + 8 && x2 > W + 8)) continue;
+    if (px < Math.min(x1, x2) - 8 || px > Math.max(x1, x2) + 8) continue;
+    const d = distToArc(px, py, x1, x2);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+/* ============ PANEL ============ */
+const panel = document.getElementById('panel'), pbody = document.getElementById('pbody'),
+      ptitle = document.getElementById('ptitle'), pback = document.getElementById('pback');
+let panelStack = [];
+document.getElementById('pclose').onclick = () => { panel.classList.remove('open'); };
+pback.onclick = () => { panelStack.pop(); const f = panelStack[panelStack.length - 1]; if (f) f(); else panel.classList.remove('open'); };
+function openPanel(render, push = true) {
+  if (push) panelStack.push(render);
+  pback.style.display = panelStack.length > 1 ? '' : 'none';
+  render();
+  panel.classList.add('open');
+}
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+function showBook(b, chap = -1, verse = -1) {
+  selBook = b; selChap = chap; selVerse = verse; selConn = -1; drawOverlay();
+  const render = () => {
+    const bk = BOOKS[b];
+    const where = chap >= 0 ? ` ${chap - bk.chapStart + 1}${verse >= 0 ? ':' + verse : ''}` : '';
+    ptitle.textContent = bk.name + where;
+    // gather connections
+    const list = [];
+    for (let k = bkOff[b]; k < bkOff[b + 1]; k++) {
+      const i = bkIdx[k];
+      if (passes(i) && (chap < 0 || connTouches(i, chap, verse))) list.push(i);
+    }
+    list.sort((x, y) => votes[y] - votes[x]);
+    const top = list.slice(0, 40);
+    let html = `<div class="meta">
+      <div class="m"><div class="k">Testament</div><div class="v">${bk.testament === 'OT' ? 'Old' : 'New'}</div></div>
+      <div class="m"><div class="k">Written</div><div class="v">${fmtYear(bk.year)}</div></div>
+      <div class="m"><div class="k">Chapters</div><div class="v">${bk.chapters}</div></div>
+      <div class="m"><div class="k">Connections${chap >= 0 ? ' here' : ''}</div><div class="v">${list.length.toLocaleString()}</div></div>
+    </div>
+    <div class="sect">Top connections${list.length > 40 ? ' (40 of ' + list.length.toLocaleString() + ')' : ''}</div>`;
+    if (!top.length) html += `<div style="color:var(--muted)">No connections match the current filters.</div>`;
+    for (const i of top) {
+      html += `<div class="connrow" data-i="${i}">
+        <span class="refs"><span class="dot" style="background:${COLORS[cat[i]]}"></span>${esc(refOf(fChap[i], fVerse[i]))} <span class="arrow">&#8596;</span> ${esc(refOf(tChap[i], tVerse[i]))}</span>
+        <span class="votes">${votes[i]} votes</span></div>`;
+    }
+    pbody.innerHTML = html;
+    pbody.querySelectorAll('.connrow').forEach(el => el.onclick = () => showConn(+el.dataset.i));
+    pbody.scrollTop = 0;
+  };
+  panelStack = [render];
+  openPanel(render, false); panelStack = [render]; pback.style.display = 'none';
+}
+async function showConn(i) {
+  selConn = i; drawOverlay();
+  const render = () => {
+    const r1 = refOf(fChap[i], fVerse[i]), r2 = refOf(tChap[i], tVerse[i]);
+    const b1 = BOOKS[bkF[i]], b2 = BOOKS[bkT[i]];
+    const span = Math.abs(b1.year - b2.year);
+    const ex = explain(i);
+    ptitle.textContent = 'Connection';
+    pbody.innerHTML = `
+      <div class="tag">${esc(ex.type)}${ex.curated ? '' : ' (auto)'}</div>
+      <div class="bigref">${esc(r1)} <span class="arrow">&#8596;</span> ${esc(r2)}</div>
+      <div class="meta" style="margin-top:12px">
+        <div class="m"><div class="k">${esc(b1.name)}</div><div class="v">${fmtYear(b1.year)}</div></div>
+        <div class="m"><div class="k">${esc(b2.name)}</div><div class="v">${fmtYear(b2.year)}</div></div>
+        <div class="m"><div class="k">Time span</div><div class="v">≈ ${span.toLocaleString()} years</div></div>
+        <div class="m"><div class="k">Community votes</div><div class="v">${votes[i]}</div></div>
+      </div>
+      <div class="expl">${esc(ex.text)}</div>
+      <div class="sect">Verse text (WEB)</div>
+      <div class="vtext" id="vt1"><div class="vr">${esc(r1)}</div><div class="vt mut">Loading…</div></div>
+      <div class="vtext" id="vt2"><div class="vr">${esc(r2)}</div><div class="vt mut">Loading…</div></div>`;
+    pbody.scrollTop = 0;
+    loadVerse(fChap[i], fVerse[i], 'vt1'); loadVerse(tChap[i], tVerse[i], 'vt2');
+  };
+  openPanel(render);
+}
+/* verse text via bible.helloao.org (Free Use Bible API: no rate limits, WEB public domain),
+   chapter-level cache, words of Jesus highlighted, bible-api.com as fallback */
+const USFM = ['GEN','EXO','LEV','NUM','DEU','JOS','JDG','RUT','1SA','2SA','1KI','2KI','1CH','2CH','EZR','NEH','EST','JOB','PSA','PRO','ECC','SNG','ISA','JER','LAM','EZK','DAN','HOS','JOL','AMO','OBA','JON','MIC','NAM','HAB','ZEP','HAG','ZEC','MAL','MAT','MRK','LUK','JHN','ACT','ROM','1CO','2CO','GAL','EPH','PHP','COL','1TH','2TH','1TI','2TI','TIT','PHM','HEB','JAS','1PE','2PE','1JN','2JN','3JN','JUD','REV'];
+const chapCache = new Map();
+function fetchChapter(b, ch) {
+  const key = b + '.' + ch;
+  if (chapCache.has(key)) return chapCache.get(key);
+  const p = (async () => {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const r = await fetch(`https://bible.helloao.org/api/ENGWEBP/${USFM[b]}/${ch}.json`, { signal: ctl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally { clearTimeout(t); }
+  })();
+  chapCache.set(key, p);
+  p.catch(() => chapCache.delete(key));
+  return p;
+}
+function verseHtml(j, v) {
+  for (const it of j.chapter.content) {
+    if (it.type === 'verse' && it.number === v) {
+      let h = '';
+      for (const c of it.content) {
+        if (typeof c === 'string') h += esc(c) + ' ';
+        else if (c && typeof c.text === 'string')
+          h += (c.wordsOfJesus ? '<span class="woj">' + esc(c.text) + '</span> ' : esc(c.text) + ' ');
+      }
+      return h.trim() || null;
+    }
+  }
+  return null;
+}
+async function loadVerse(chapG, verse, id) {
+  const el = () => document.querySelector('#' + id + ' .vt');
+  const b = chapBook[chapG], ch = chapG - BOOKS[b].chapStart + 1;
+  try {
+    const j = await fetchChapter(b, ch);
+    const h = verseHtml(j, verse);
+    if (!h) throw new Error('verse not in chapter');
+    if (el()) { el().innerHTML = '“' + h + '”'; el().classList.remove('mut'); }
+  } catch (e) {
+    try {
+      const r = await fetch('https://bible-api.com/' + encodeURIComponent(refOf(chapG, verse)) + '?translation=web');
+      const j = await r.json();
+      if (el()) { el().textContent = '“' + (j.text || '').trim().replace(/\s+/g, ' ') + '”'; el().classList.remove('mut'); }
+    } catch (e2) {
+      if (el()) el().textContent = 'Verse text unavailable (offline or API unreachable).';
+    }
+  }
+}
+/* ============ SEARCH ============ */
+const searchEl = document.getElementById('search'), suggest = document.getElementById('suggest');
+function norm(s) { return s.toLowerCase().replace(/[^a-z0-9:]/g, ''); }
+function parseQuery(q) {
+  const m = q.trim().match(/^(.+?)\s*(?:\s|\.)?(\d+)?(?:[:.](\d+))?$/);
+  if (!m) return null;
+  let raw = m[1].trim(); const chap = m[2] ? +m[2] : -1, verse = m[3] ? +m[3] : -1;
+  // strip trailing digits handling like "1 john 4" — try longest book match
+  const nq = norm(raw);
+  if (!nq) return null;
+  let book = -1;
+  BOOKS.forEach((b, i) => {
+    if (norm(b.name) === nq || norm(b.osis) === nq) book = i;
+  });
+  if (book < 0) BOOKS.forEach((b, i) => {
+    if (book < 0 && (norm(b.name).startsWith(nq) || norm(b.osis).startsWith(nq))) book = i;
+  });
+  if (book < 0) return null;
+  return { book, chap, verse };
+}
+function applySearch(q) {
+  const r = parseQuery(q);
+  if (!r) return false;
+  const bk = BOOKS[r.book];
+  const chapG = r.chap > 0 && r.chap <= bk.chapters ? bk.chapStart + r.chap - 1 : -1;
+  zoomToBook(r.book);
+  showBook(r.book, chapG, chapG >= 0 ? r.verse : -1);
+  return true;
+}
+function zoomToBook(b) {
+  const f1 = bookVStart[b], f2 = bookVEnd[b];
+  const span = f2 - f1;
+  zoom = Math.max(1, Math.min(60, 0.55 / span));
+  panX = ((f1 + f2) / 2) * W * zoom - W / 2;
+  clampPan(); renderBase(); drawOverlay();
+}
+searchEl.addEventListener('input', () => {
+  const q = searchEl.value.trim();
+  if (q.length < 2) { suggest.style.display = 'none'; return; }
+  const nq = norm(q.replace(/[\d:.\s]+$/, '') || q);
+  const hits = BOOKS.map((b, i) => ({ b, i })).filter(({ b }) => norm(b.name).startsWith(nq) || norm(b.osis).startsWith(nq)).slice(0, 8);
+  if (!hits.length) { suggest.style.display = 'none'; return; }
+  suggest.innerHTML = hits.map(({ b, i }) => `<div data-b="${i}">${esc(b.name)} <span style="color:var(--muted)">· ${b.chapters} ch · ${bookCount[i].toLocaleString()} connections</span></div>`).join('');
+  suggest.style.display = 'block';
+  suggest.querySelectorAll('div').forEach(el => el.onclick = () => {
+    suggest.style.display = 'none';
+    searchEl.value = BOOKS[+el.dataset.b].name;
+    zoomToBook(+el.dataset.b); showBook(+el.dataset.b);
+  });
+});
+searchEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { suggest.style.display = 'none'; if (!applySearch(searchEl.value)) searchEl.style.borderColor = 'var(--red)'; else searchEl.style.borderColor = ''; }
+});
+document.addEventListener('click', e => { if (!e.target.closest('#searchwrap')) suggest.style.display = 'none'; });
+/* ============ FILTERS ============ */
+document.querySelectorAll('.fbtn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.fbtn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); filter = b.dataset.f; renderBase(); drawOverlay();
+});
+const mv = document.getElementById('minvotes');
+mv.oninput = () => { minVotes = +mv.value; document.getElementById('mvval').textContent = mv.value; };
+mv.onchange = () => { renderBase(); drawOverlay(); };
+/* ============ POINTER / ZOOM ============ */
+const tooltip = document.getElementById('tooltip');
+let dragging = false, dragMoved = false, lastX = 0, pinch = null;
+const pointers = new Map();
+overC.addEventListener('pointerdown', e => {
+  overC.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom }; }
+  dragging = true; dragMoved = false; lastX = e.offsetX;
+  overC.classList.add('drag');
+});
+let hoverRaf = 0, hoverPt = null;
+overC.addEventListener('pointermove', e => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  if (pointers.size === 2 && pinch) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    const cx = (a.x + b.x) / 2;
+    setZoom(pinch.zoom * d / pinch.d, cx); return;
+  }
+  if (dragging) {
+    const dx = e.offsetX - lastX; lastX = e.offsetX;
+    if (dx) { panX -= dx; clampPan(); if (Math.abs(dx) > 2) dragMoved = true; scheduleView(); }
+    return;
+  }
+  // hover: coalesce to one hit-test per frame
+  hoverPt = { x: e.offsetX, y: e.offsetY };
+  if (!hoverRaf) hoverRaf = requestAnimationFrame(() => { hoverRaf = 0; processHover(hoverPt); });
+});
+function processHover(p) {
+  const { x, y } = p;
+  if (y >= barY() && y <= barY() + barH + 36) {
+    const b = bookAtX(x);
+    if (b !== hoverBook) { hoverBook = b; drawOverlay(); }
+    if (b >= 0) {
+      tooltip.innerHTML = `<b>${esc(BOOKS[b].name)}</b><br><span class="mut">${BOOKS[b].testament === 'OT' ? 'Old' : 'New'} Testament · ${fmtYear(BOOKS[b].year)} · ${BOOKS[b].chapters} chapters<br>${bookCount[b].toLocaleString()} connections — click to explore</span>`;
+      placeTip(p); return;
+    }
+  } else if (hoverBook !== -1) { hoverBook = -1; drawOverlay(); }
+  const hit = hitArc(x, y);
+  if (hit >= 0) {
+    tooltip.innerHTML = `<b>${esc(refOf(fChap[hit], fVerse[hit]))} ↔ ${esc(refOf(tChap[hit], tVerse[hit]))}</b><br><span class="mut">${votes[hit]} votes — click for details</span>`;
+    placeTip(p); overC.style.cursor = 'pointer'; return;
+  }
+  overC.style.cursor = ''; tooltip.style.display = 'none';
+}
+function placeTip(p) {
+  tooltip.style.display = 'block';
+  const tw = tooltip.offsetWidth;
+  tooltip.style.left = Math.min(W - tw - 8, p.x + 14) + 'px';
+  tooltip.style.top = Math.max(6, p.y - tooltip.offsetHeight - 12) + 'px';
+}
+overC.addEventListener('pointerup', e => {
+  pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null;
+  overC.classList.remove('drag');
+  const wasDrag = dragMoved; dragging = false; dragMoved = false;
+  if (wasDrag) return;
+  const x = e.offsetX, y = e.offsetY;
+  if (y >= barY() && y <= barY() + barH + 36) {
+    const b = bookAtX(x);
+    if (b >= 0) { showBook(b); return; }
+  }
+  const hit = hitArc(x, y);
+  if (hit >= 0) { selBook = -1; selChap = -1; drawOverlay(); showConn(hit); panelStack = panelStack.slice(-1); pback.style.display = 'none'; }
+  else { selBook = -1; selConn = -1; selChap = -1; selVerse = -1; panel.classList.remove('open'); drawOverlay(); }
+});
+overC.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); pinch = null; dragging = false; });
+overC.addEventListener('dblclick', e => {
+  const b = bookAtX(e.offsetX);
+  if (b >= 0) { zoomToBook(b); showBook(b); }
+});
+function setZoom(z, anchorX) {
+  z = Math.max(1, Math.min(80, z));
+  const frac = (anchorX + panX) / (W * zoom);
+  zoom = z;
+  panX = frac * W * zoom - anchorX;
+  clampPan(); scheduleView();
+}
+overC.addEventListener('wheel', e => {
+  e.preventDefault();
+  setZoom(zoom * Math.exp(-e.deltaY * 0.0016), e.offsetX);
+}, { passive: false });
+document.getElementById('zin').onclick = () => setZoom(zoom * 1.5, W / 2);
+document.getElementById('zout').onclick = () => setZoom(zoom / 1.5, W / 2);
+document.getElementById('reset').onclick = () => {
+  zoom = 1; panX = 0; selBook = -1; selConn = -1; selChap = -1; selVerse = -1; hoverBook = -1;
+  panel.classList.remove('open'); searchEl.value = '';
+  renderBase(); drawOverlay();
+};
+window.addEventListener('resize', resize);
+resize();
+{ const l = document.getElementById('loading'); if (l) l.remove(); }
+
+})();
+</script>
+</body>
+</html>
