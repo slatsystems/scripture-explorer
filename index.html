@@ -1218,7 +1218,14 @@ try {
     }
     return g;
   }
-  function applyTransform() { gRoot.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`); }
+  function clampTransform() { // keep the tree in view: can't scroll past the first/last box
+    const w = +(gRoot.getAttribute('data-w') || 0), h = +(gRoot.getAttribute('data-h') || 0);
+    const vw = svg.clientWidth, vh = svg.clientHeight, MT = 58, MB = 34, MX = 30;
+    const cw = w * scale, ch = h * scale;
+    if (ch <= vh - MT - MB) ty = MT; else ty = Math.min(MT, Math.max(ty, vh - MB - ch));
+    if (cw <= vw - 2 * MX) tx = (vw - cw) / 2; else tx = Math.min(MX, Math.max(tx, vw - MX - cw));
+  }
+  function applyTransform() { clampTransform(); gRoot.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`); }
   function fit() {
     const w = +gRoot.getAttribute('data-w'), h = +gRoot.getAttribute('data-h');
     const vw = svg.clientWidth, vh = svg.clientHeight;
