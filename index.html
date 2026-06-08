@@ -96,7 +96,7 @@ body.embed header h1,body.embed footer{display:none}
 .vtab{background:none;border:none;color:var(--muted);font-size:13px;padding:5px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .vtab.active{background:var(--gold);color:#1a1a2e;font-weight:600}
 /* family tree */
-#treeStage{position:absolute;inset:0;display:none}
+#treeStage{position:relative;flex:1;min-height:0;display:none}
 body.view-tree #stage{display:none}
 body.view-tree #treeStage{display:block}
 body.view-tree #searchwrap,body.view-tree header .ctrl{display:none}
@@ -190,24 +190,24 @@ body.view-tree #footer-tree{display:flex}
     </div>
     <div id="pbody"></div>
   </aside>
-  <div id="treeStage">
-    <svg id="treeSvg"><g id="treeRoot"></g></svg>
-    <div id="treebar">
-      <div id="treesearchwrap">
-        <input id="treesearch" placeholder="Find a person… e.g. David" autocomplete="off">
-        <div id="treesug"></div>
-      </div>
-      <button class="btn" id="texpand">Expand all</button>
-      <button class="btn" id="tcollapse">Line only</button>
-      <button class="btn" id="tzin">+</button>
-      <button class="btn" id="tzout">&minus;</button>
-      <button class="btn" id="treset">Reset</button>
+</div>
+<div id="treeStage">
+  <svg id="treeSvg"><g id="treeRoot"></g></svg>
+  <div id="treebar">
+    <div id="treesearchwrap">
+      <input id="treesearch" placeholder="Find a person… e.g. David" autocomplete="off">
+      <div id="treesug"></div>
     </div>
-    <aside id="tpanel" class="tpanel">
-      <div class="phead"><h2 id="tptitle">Person</h2><button id="tpclose" title="Close">&#10005;</button></div>
-      <div id="tpbody"></div>
-    </aside>
+    <button class="btn" id="texpand">Expand all</button>
+    <button class="btn" id="tcollapse">Line only</button>
+    <button class="btn" id="tzin">+</button>
+    <button class="btn" id="tzout">&minus;</button>
+    <button class="btn" id="treset">Reset</button>
   </div>
+  <aside id="tpanel" class="tpanel">
+    <div class="phead"><h2 id="tptitle">Person</h2><button id="tpclose" title="Close">&#10005;</button></div>
+    <div id="tpbody"></div>
+  </aside>
 </div>
 <footer id="footer-xref">
   <span class="leg"><i style="background:var(--purple)"></i> Nearby books</span>
