@@ -223,6 +223,7 @@ body.view-tree #footer-tree{display:flex}
   <span class="leg"><i style="background:#34d399"></i> Levitical priest</span>
   <span class="leg"><i style="background:#5b8bf0"></i> Son of Jacob (tribe)</span>
   <span>Curated from public-domain WEB · 92 people, Adam → Jesus</span>
+  <span id="hint">Scroll to move &middot; ⌘/Ctrl+scroll or pinch to zoom &middot; tap a name</span>
 </footer>
 <script>
 // Generated from OpenBible.info cross-references (CC-BY)
@@ -1289,7 +1290,11 @@ try {
     });
     svg.addEventListener('pointerup', e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; drag = false; svg.classList.remove('drag'); });
     svg.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; drag = false; });
-    svg.addEventListener('wheel', e => { e.preventDefault(); zoomAt(scale * Math.exp(-e.deltaY * 0.0016), e.offsetX, e.offsetY); }, { passive: false });
+    svg.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) { zoomAt(scale * Math.exp(-e.deltaY * 0.0016), e.offsetX, e.offsetY); } // ctrl/⌘+wheel or pinch = zoom
+      else { tx -= e.deltaX; ty -= e.deltaY; applyTransform(); }                                          // wheel = scroll the tree
+    }, { passive: false });
   }
   function zoomAt(z, cx, cy) {
     z = Math.max(0.2, Math.min(2.5, z));
