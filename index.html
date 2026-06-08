@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Scripture Cross-Reference Explorer — Dominion Christian Center</title>
+<title>Scripture Cross-Reference Explorer</title>
 <style>
 :root{
   --bg:#0d0d1a; --card:#1a1a2e; --card2:#222240; --gold:#d4af37; --text:#e8e6f0;
@@ -11,7 +11,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden;display:flex;flex-direction:column}
+body{height:100dvh;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden;display:flex;flex-direction:column;overscroll-behavior:none}
+#overlay{touch-action:none}
 header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--card);border-bottom:1px solid #2a2a4a;flex-wrap:wrap;z-index:5}
 header h1{font-size:17px;font-weight:600;color:var(--gold);white-space:nowrap}
 header .stats{color:var(--muted);font-size:12px;white-space:nowrap}
@@ -65,7 +66,20 @@ footer{display:flex;gap:16px;align-items:center;padding:7px 16px;background:var(
 .leg{display:flex;align-items:center;gap:5px}
 .leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
 #hint{margin-left:auto}
-@media (max-width:700px){ header h1{font-size:14px} .stats{display:none} #hint{display:none} }
+@media (max-width:700px){
+  header{padding:8px 10px;gap:8px}
+  header h1{font-size:14px}
+  .stats{display:none} #hint{display:none}
+  #searchwrap{min-width:140px;max-width:none;flex:1 1 100%;order:1}
+  .ctrl{order:2;width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+  .ctrl::-webkit-scrollbar{display:none}
+  .btn{padding:5px 9px;font-size:12px;white-space:nowrap;flex:none}
+  label.sl{flex:none}
+  #panel{width:100vw;border-left:none;border-top:1px solid #2e2e55}
+  footer{padding:6px 10px;gap:10px;font-size:10px}
+  .wcard{padding:18px;max-height:86dvh;overflow-y:auto}
+}
+body.embed header h1,body.embed footer{display:none}
 .tip{position:relative;cursor:help;border-bottom:1px dotted var(--muted)}
 .tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#22224a;border:1px solid var(--gold);color:var(--text);padding:9px 11px;border-radius:8px;width:230px;font-size:12px;line-height:1.45;z-index:60;white-space:normal;text-transform:none;letter-spacing:0;font-weight:400;box-shadow:0 6px 22px rgba(0,0,0,.55)}
 #welcome{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(13,13,26,.82);backdrop-filter:blur(3px);z-index:70;padding:16px}
@@ -540,6 +554,7 @@ function openPanel(render, push = true) {
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 function showBook(b, chap = -1, verse = -1) {
   selBook = b; selChap = chap; selVerse = verse; selConn = -1; drawOverlay();
+  emit('book', { book: BOOKS[b].name, index: b, connections: bookCount[b] });
   const render = () => {
     const bk = BOOKS[b];
     const where = chap >= 0 ? ` ${chap - bk.chapStart + 1}${verse >= 0 ? ':' + verse : ''}` : '';
@@ -577,6 +592,7 @@ function showBook(b, chap = -1, verse = -1) {
 }
 async function showConn(i) {
   selConn = i; drawOverlay();
+  emit('connection', { from: refOf(fChap[i], fVerse[i]), to: refOf(tChap[i], tVerse[i]), votes: votes[i] });
   const render = () => {
     const r1 = refOf(fChap[i], fVerse[i]), r2 = refOf(tChap[i], tVerse[i]);
     const b1 = BOOKS[bkF[i]], b2 = BOOKS[bkT[i]];
@@ -798,14 +814,31 @@ overC.addEventListener('wheel', e => {
 }, { passive: false });
 document.getElementById('zin').onclick = () => setZoom(zoom * 1.5, W / 2);
 document.getElementById('zout').onclick = () => setZoom(zoom / 1.5, W / 2);
-document.getElementById('reset').onclick = () => {
+function resetView() {
   zoom = 1; panX = 0; selBook = -1; selConn = -1; selChap = -1; selVerse = -1; hoverBook = -1;
   panel.classList.remove('open'); searchEl.value = '';
   renderBase(); drawOverlay();
-};
+}
+document.getElementById('reset').onclick = resetView;
+/* ============ REACT NATIVE WEBVIEW BRIDGE ============ */
+const RN = () => window.ReactNativeWebView;
+function emit(type, payload) {
+  try { if (RN()) RN().postMessage(JSON.stringify(Object.assign({ type }, payload))); } catch (e) {}
+}
+function onBridgeCmd(e) {
+  let d; try { d = JSON.parse(e.data); } catch (err) { return; }
+  if (!d || !d.type) return;
+  if (d.type === 'search' && d.query) applySearch(String(d.query));
+  else if (d.type === 'reset') resetView();
+  else if (d.type === 'showBook' && d.book >= 0 && d.book < NB) { zoomToBook(d.book); showBook(d.book); }
+}
+window.addEventListener('message', onBridgeCmd);   // iOS
+document.addEventListener('message', onBridgeCmd); // Android
+if (RN() || /[?&]embed=1/.test(location.search)) document.body.classList.add('embed');
 window.addEventListener('resize', resize);
 resize();
 { const l = document.getElementById('loading'); if (l) l.remove(); }
+emit('ready', { connections: N, books: NB });
 // first-visit welcome (explains the viz + votes); never shown again once dismissed
 try {
   if (!localStorage.getItem('se_welcome')) {
