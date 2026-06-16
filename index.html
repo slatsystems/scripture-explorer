@@ -94,6 +94,31 @@ footer{display:flex;gap:16px;align-items:center;padding:7px 16px;background:var(
   .wcard{padding:18px;max-height:86dvh;overflow-y:auto}
 }
 body.embed header h1,body.embed footer{display:none}
+/* compare view */
+#cmpStage{position:relative;flex:1;min-height:0;display:none;flex-direction:column}
+body.view-compare #stage{display:none}
+body.view-compare #cmpStage{display:flex}
+body.view-compare #searchwrap,body.view-compare header .ctrl{display:none}
+body.view-compare #footer-xref{display:none}
+#footer-compare{display:none}
+body.view-compare #footer-compare{display:flex}
+#cmpbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid #2a2a4a;background:var(--card);flex-wrap:wrap}
+#cmpbar select,#cmpbar .sl{flex:none}
+#cmpbody{flex:1;overflow-y:auto;padding:0 0 30px}
+.cmpwrap{max-width:1000px;margin:0 auto;padding:10px 16px}
+.cmphead{display:grid;grid-template-columns:34px 1fr 1fr;gap:14px;position:sticky;top:0;background:var(--bg);padding:10px 0 8px;border-bottom:1px solid #2a2a4a;z-index:2}
+.cmphead .ch{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);font-weight:600}
+.cmprow{display:grid;grid-template-columns:34px 1fr 1fr;gap:14px;padding:9px 0;border-bottom:1px solid #1c1c33;align-items:start}
+.cmprow .vn{color:var(--muted);font-size:11px;text-align:right;padding-top:2px}
+.cmprow .col{font-size:14px;line-height:1.55;color:#d8d5ea}
+.cmprow.variant{background:rgba(212,175,55,.06);border-left:3px solid var(--gold);margin-left:-10px;padding-left:7px;border-radius:0 6px 6px 0}
+.cmprow.variant .vn{color:var(--gold)}
+.cmpnote{grid-column:2/4;font-size:12px;color:var(--gold);background:rgba(212,175,55,.08);border-radius:6px;padding:6px 10px;margin-top:6px}
+.cmpnote b{text-transform:uppercase;font-size:10px;letter-spacing:.06em}
+.cmpmiss{color:#6a668a;font-style:italic;font-size:12px}
+.woj{color:#e8736d}
+#cmploading{text-align:center;color:var(--muted);padding:50px;font-size:13px}
+@media (max-width:700px){ #cmpbar{padding:8px 10px;gap:6px} .cmphead,.cmprow{grid-template-columns:26px 1fr 1fr;gap:8px} .cmprow .col{font-size:13px} }
 /* view tabs */
 #viewtabs{display:flex;gap:4px;background:#12122a;border:1px solid #2a2a4a;border-radius:9px;padding:3px}
 .vtab{background:none;border:none;color:var(--muted);font-size:13px;padding:5px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
@@ -144,6 +169,7 @@ body.view-tree #footer-tree{display:flex}
   <div id="viewtabs">
     <button class="vtab active" data-v="xref">Cross-References</button>
     <button class="vtab" data-v="tree">Family Tree</button>
+    <button class="vtab" data-v="compare">Compare</button>
   </div>
   <span class="stats" id="stats"></span>
   <div id="searchwrap">
@@ -213,6 +239,17 @@ body.view-tree #footer-tree{display:flex}
     <div id="tpbody"></div>
   </aside>
 </div>
+<div id="cmpStage">
+  <div id="cmpbar">
+    <select id="cmpbook" class="btn"></select>
+    <select id="cmpchap" class="btn"></select>
+    <button class="btn" id="cmpprev" title="Previous chapter">&#8592;</button>
+    <button class="btn" id="cmpnext" title="Next chapter">&#8594;</button>
+    <select id="cmpvar" class="btn" title="Jump to a famous textual variant"><option value="">Famous variants…</option></select>
+    <label class="sl"><input type="checkbox" id="cmponlyvar"> Variants only</label>
+  </div>
+  <div id="cmpbody"></div>
+</div>
 <footer id="footer-xref">
   <span class="leg"><i style="background:var(--purple)"></i> Nearby books</span>
   <span class="leg"><i style="background:var(--green)"></i> Medium span</span>
@@ -228,6 +265,11 @@ body.view-tree #footer-tree{display:flex}
   <span class="leg"><i style="background:#5b8bf0"></i> Son of Jacob (tribe)</span>
   <span>Curated from public-domain WEB · 248 people, Adam → Jesus</span>
   <span id="hint">Scroll to move &middot; ⌘/Ctrl+scroll or pinch to zoom &middot; tap a name</span>
+</footer>
+<footer id="footer-compare">
+  <span class="leg"><i style="background:var(--gold)"></i> Textual variant (manuscripts differ)</span>
+  <span><b>NU</b> = Nestle-Aland/UBS critical text &middot; <b>TR</b> = Textus Receptus &middot; <b>MT</b> = Majority Text</span>
+  <span>KJV (1611, public domain) vs World English Bible · text via bible-api.com &amp; helloao</span>
 </footer>
 <script>
 // Generated from OpenBible.info cross-references (CC-BY)
@@ -1113,7 +1155,7 @@ async function loadVerseByRef(osis, elSel) {
     if (el()) el().textContent = 'Verse text unavailable (offline).';
   }
 }
-window.__SE = { loadVerseByRef, esc, resizeXref: () => resize() };
+window.__SE = { loadVerseByRef, esc, resizeXref: () => resize(), USFM, BOOKS };
 /* ============ SEARCH ============ */
 const searchEl = document.getElementById('search'), suggest = document.getElementById('suggest');
 function norm(s) { return s.toLowerCase().replace(/[^a-z0-9:]/g, ''); }
@@ -1626,11 +1668,131 @@ try {
   document.querySelectorAll('.vtab').forEach(b => b.onclick = () => {
     document.querySelectorAll('.vtab').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
-    const tree = b.dataset.v === 'tree';
-    document.body.classList.toggle('view-tree', tree);
-    if (tree) { initTree(); requestAnimationFrame(() => { if (!gRoot.getAttribute('data-fitted')) { fit(); gRoot.setAttribute('data-fitted','1'); } }); }
+    const v = b.dataset.v;
+    document.body.classList.toggle('view-tree', v === 'tree');
+    document.body.classList.toggle('view-compare', v === 'compare');
+    if (v === 'tree') { initTree(); requestAnimationFrame(() => { if (!gRoot.getAttribute('data-fitted')) { fit(); gRoot.setAttribute('data-fitted', '1'); } }); }
+    else if (v === 'compare') { if (window.__CMP) window.__CMP.show(); }
     else if (window.__SE) window.__SE.resizeXref();
   });
+})();
+
+/* ===================== TRANSLATION COMPARE (KJV | WEB) ===================== */
+(function () {
+  const esc = s => (window.__SE ? window.__SE.esc(String(s)) : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'));
+  const B = () => (window.__SE ? window.__SE.BOOKS : (typeof BOOKS !== 'undefined' ? BOOKS : []));
+  const USFM = () => (window.__SE ? window.__SE.USFM : []);
+  // famous textual variants — neutral manuscript notes
+  const VARIANTS = [
+    ['Matthew', 17, 21, 'Matthew 17:21'], ['Matthew', 18, 11, 'Matthew 18:11'], ['Matthew', 23, 14, 'Matthew 23:14'],
+    ['Mark', 7, 16, 'Mark 7:16'], ['Mark', 9, 44, 'Mark 9:44 & 46'], ['Mark', 11, 26, 'Mark 11:26'],
+    ['Mark', 15, 28, 'Mark 15:28'], ['Mark', 16, 9, 'Mark 16:9–20 — the long ending'],
+    ['Luke', 17, 36, 'Luke 17:36'], ['Luke', 23, 17, 'Luke 23:17'],
+    ['John', 5, 4, 'John 5:4 — the angel at the pool'], ['John', 7, 53, 'John 7:53–8:11 — woman caught in adultery'],
+    ['Acts', 8, 37, 'Acts 8:37 — the eunuch’s confession'], ['Acts', 15, 34, 'Acts 15:34'],
+    ['Acts', 24, 7, 'Acts 24:7'], ['Acts', 28, 29, 'Acts 28:29'],
+    ['Romans', 16, 24, 'Romans 16:24'], ['1 John', 5, 7, '1 John 5:7 — the Johannine Comma'],
+  ];
+  let bookIdx = -1, chap = 1, jumpVerse = 0, inited = false;
+  const cache = new Map();
+  const bookSel = () => document.getElementById('cmpbook');
+  const chapSel = () => document.getElementById('cmpchap');
+  const body = () => document.getElementById('cmpbody');
+
+  const isVariantText = t => /\bNU\b|\bTR\b|Majority Text|\bMajority\b|\bomits?\b|\badds?\b/.test(t);
+  function webVerseText(content) {
+    let h = '';
+    for (const c of content) {
+      if (typeof c === 'string') h += esc(c) + ' ';
+      else if (c && typeof c.text === 'string') h += (c.wordsOfJesus ? '<span class="woj">' + esc(c.text) + '</span> ' : esc(c.text) + ' ');
+    }
+    return h.trim();
+  }
+  async function fetchWEB(b, ch) {
+    const key = 'W' + b + '.' + ch;
+    if (cache.has(key)) return cache.get(key);
+    const p = fetch(`https://bible.helloao.org/api/ENGWEBP/${USFM()[b]}/${ch}.json`).then(r => r.json());
+    cache.set(key, p); p.catch(() => cache.delete(key)); return p;
+  }
+  async function fetchKJV(b, ch) {
+    const key = 'K' + b + '.' + ch;
+    if (cache.has(key)) return cache.get(key);
+    const name = B()[b].name;
+    const p = fetch(`https://bible-api.com/${encodeURIComponent(name + ' ' + ch)}?translation=kjv`).then(r => r.json());
+    cache.set(key, p); p.catch(() => cache.delete(key)); return p;
+  }
+  async function render() {
+    const b = bookIdx, ch2 = chap;
+    body().innerHTML = '<div id="cmploading">Loading ' + esc(B()[b].name) + ' ' + ch2 + ' in both translations…</div>';
+    let web, kjv;
+    try { [web, kjv] = await Promise.all([fetchWEB(b, ch2), fetchKJV(b, ch2)]); }
+    catch (e) { body().innerHTML = '<div id="cmploading">Couldn’t load this chapter (offline or API unreachable). Try again.</div>'; return; }
+    if (b !== bookIdx || ch2 !== chap) return; // user navigated away
+    // WEB verses + textual-variant footnotes
+    const webV = {}, varNote = {};
+    const wc = web && web.chapter ? web.chapter : {};
+    for (const it of (wc.content || [])) if (it.type === 'verse') webV[it.number] = webVerseText(it.content);
+    for (const fn of (wc.footnotes || [])) {
+      if (fn.reference && fn.reference.verse && isVariantText(fn.text || '')) {
+        (varNote[fn.reference.verse] = varNote[fn.reference.verse] || []).push(fn.text);
+      }
+    }
+    const kjvV = {};
+    for (const v of ((kjv && kjv.verses) || [])) kjvV[v.verse] = String(v.text || '').replace(/\s+/g, ' ').trim();
+    const nums = [...new Set([...Object.keys(kjvV), ...Object.keys(webV)].map(Number))].sort((a, b) => a - b);
+    const onlyVar = document.getElementById('cmponlyvar').checked;
+    let html = `<div class="cmpwrap"><div class="cmphead"><div></div><div class="ch">King James Version</div><div class="ch">World English Bible</div></div>`;
+    let shown = 0;
+    for (const n of nums) {
+      const isVar = !!varNote[n];
+      if (onlyVar && !isVar) continue;
+      shown++;
+      html += `<div class="cmprow${isVar ? ' variant' : ''}" id="cmpv${n}">
+        <div class="vn">${n}</div>
+        <div class="col">${kjvV[n] != null ? esc(kjvV[n]) : '<span class="cmpmiss">— not in this text —</span>'}</div>
+        <div class="col">${webV[n] != null ? webV[n] : '<span class="cmpmiss">— not in this text —</span>'}</div>`;
+      if (isVar) html += `<div class="cmpnote"><b>Textual variant · </b>${esc(varNote[n].join(' '))}</div>`;
+      html += `</div>`;
+    }
+    if (onlyVar && !shown) html += `<div id="cmploading">No flagged textual variants in this chapter. Most chapters read the same across manuscripts — uncheck “Variants only” to read the chapter.</div>`;
+    html += `</div>`;
+    body().innerHTML = html;
+    if (jumpVerse) { const el = document.getElementById('cmpv' + jumpVerse); if (el) el.scrollIntoView({ block: 'center' }); jumpVerse = 0; }
+    else body().scrollTop = 0;
+  }
+  function setBookChap(b, c, v) {
+    bookIdx = b; chap = c; jumpVerse = v || 0;
+    bookSel().value = String(b);
+    populateChapters();
+    chapSel().value = String(c);
+    render();
+  }
+  function populateChapters() {
+    const cs = chapSel(); cs.innerHTML = '';
+    const n = B()[bookIdx].chapters;
+    for (let c = 1; c <= n; c++) { const o = document.createElement('option'); o.value = c; o.textContent = 'Chapter ' + c; cs.appendChild(o); }
+  }
+  function init() {
+    if (inited) return; inited = true;
+    const bs = bookSel();
+    B().forEach((bk, i) => { const o = document.createElement('option'); o.value = i; o.textContent = bk.name; bs.appendChild(o); });
+    const vs = document.getElementById('cmpvar');
+    VARIANTS.forEach((vv, i) => { const o = document.createElement('option'); o.value = i; o.textContent = vv[3]; vs.appendChild(o); });
+    bs.onchange = () => { bookIdx = +bs.value; chap = 1; jumpVerse = 0; populateChapters(); render(); };
+    chapSel().onchange = () => { chap = +chapSel().value; jumpVerse = 0; render(); };
+    document.getElementById('cmpprev').onclick = () => { if (chap > 1) { chap--; jumpVerse = 0; chapSel().value = chap; render(); } };
+    document.getElementById('cmpnext').onclick = () => { if (chap < B()[bookIdx].chapters) { chap++; jumpVerse = 0; chapSel().value = chap; render(); } };
+    document.getElementById('cmponlyvar').onchange = render;
+    vs.onchange = () => {
+      if (vs.value === '') return;
+      const [name, c, v] = VARIANTS[+vs.value];
+      const bi = B().findIndex(bk => bk.name === name);
+      vs.value = '';
+      if (bi >= 0) setBookChap(bi, c, v);
+    };
+    setBookChap(39, 17, 21); // default: Matthew 17 (shows the v21 variant)
+  }
+  window.__CMP = { show() { init(); } };
 })();
 </script>
 </body>
